@@ -25,10 +25,7 @@
 
       <h1>🐺 Loup-Garou V7</h1>
 
-      <p>
-        Crée ton compte et joue avec tes amis !
-      </p>
-
+      <p>Crée ton compte et joue avec tes amis !</p>
 
       <div class="tabs">
 
@@ -97,16 +94,15 @@
         <input
           id="registerPassword"
           type="password"
-          placeholder="Mot de passe"
+          placeholder="Mot de passe (6 caractères minimum)"
           required
         >
 
         <button type="submit">
-          Créer mon compte
+          🎁 Créer mon compte (+50 pièces)
         </button>
 
       </form>
-
 
       <p id="authMessage"></p>
 
@@ -168,11 +164,11 @@
     </header>
 
 
+    <!-- XP -->
+
     <section class="xp-section">
 
-      <h3>
-        Progression
-      </h3>
+      <h3>Progression</h3>
 
       <div class="xp-bar">
 
@@ -187,7 +183,9 @@
     </section>
 
 
-    <!-- BOUTONS PRINCIPAUX -->
+    <!-- =========================
+         BOUTONS PRINCIPAUX
+    ========================== -->
 
     <section class="menu-buttons">
 
@@ -215,6 +213,16 @@
         ⚙️ Paramètres
       </button>
 
+
+      <!-- ADMIN UNIQUEMENT -->
+
+      <button
+        id="adminButton"
+        class="hidden"
+      >
+        👑 Administration
+      </button>
+
     </section>
 
 
@@ -222,20 +230,27 @@
          SALON DE JEU
     ========================== -->
 
-    <section id="gameLobby" class="hidden page">
+    <section
+      id="gameLobby"
+      class="hidden page"
+    >
 
       <h2>🎮 Jouer en ligne</h2>
 
       <button id="createRoomButton">
         ➕ Créer une partie
       </button>
-      <button id="startGameButton" class="hidden">
-  ▶️ Lancer la partie
-</button>
 
-      <h3>
-        Rejoindre une partie
-      </h3>
+
+      <button
+        id="startGameButton"
+        class="hidden"
+      >
+        ▶️ Lancer la partie
+      </button>
+
+
+      <h3>Rejoindre une partie</h3>
 
       <input
         id="joinRoomCode"
@@ -243,18 +258,47 @@
       >
 
       <button id="joinRoomButton">
-        Rejoindre
+        🚪 Rejoindre
       </button>
 
-      <h3>
-        Parties disponibles
-      </h3>
+
+      <h3>Parties disponibles</h3>
 
       <div id="roomsList">
-
         Aucune partie pour le moment.
+      </div>
+
+    </section>
+
+
+    <!-- =========================
+         PARTIE
+    ========================== -->
+
+    <section
+      id="gamePage"
+      class="hidden page"
+    >
+
+      <h2>🐺 Partie en cours</h2>
+
+      <p id="gameStatus">
+        La partie commence...
+      </p>
+
+      <div id="gameRole">
+
+        Ton rôle sera affiché ici.
 
       </div>
+
+      <h3>Joueurs</h3>
+
+      <div id="gamePlayers"></div>
+
+      <button id="leaveGameButton">
+        🚪 Quitter la partie
+      </button>
 
     </section>
 
@@ -263,13 +307,17 @@
          CLASSES
     ========================== -->
 
-    <section id="classesPage" class="hidden page">
+    <section
+      id="classesPage"
+      class="hidden page"
+    >
 
       <h2>🐺 Classes</h2>
 
       <p>
         Une classe équipée augmente tes chances
-        d'obtenir un rôle au début d'une partie.
+        d'obtenir un rôle spécifique au début
+        d'une partie.
       </p>
 
       <div id="classesList"></div>
@@ -281,9 +329,17 @@
          QUÊTES
     ========================== -->
 
-    <section id="questsPage" class="hidden page">
+    <section
+      id="questsPage"
+      class="hidden page"
+    >
 
       <h2>📜 Quêtes</h2>
+
+      <p>
+        Termine des objectifs pour gagner
+        de l'XP et des pièces.
+      </p>
 
       <div id="questsList"></div>
 
@@ -294,7 +350,10 @@
          AMIS
     ========================== -->
 
-    <section id="friendsPage" class="hidden page">
+    <section
+      id="friendsPage"
+      class="hidden page"
+    >
 
       <h2>👥 Amis</h2>
 
@@ -304,16 +363,17 @@
       >
 
       <button id="searchFriendButton">
-        Rechercher
+        🔎 Rechercher
       </button>
 
       <div id="friendResult"></div>
 
-      <h3>
-        Mes amis
-      </h3>
 
-      <div id="friendsList"></div>
+      <h3>Mes amis</h3>
+
+      <div id="friendsList">
+        Chargement...
+      </div>
 
     </section>
 
@@ -322,13 +382,22 @@
          CLASSEMENT
     ========================== -->
 
-    <section id="rankingPage" class="hidden page">
+    <section
+      id="rankingPage"
+      class="hidden page"
+    >
 
       <h2>🏆 Top 100 mondial</h2>
 
       <p>
         Classement selon le nombre de trophées.
+        Les joueurs hors ligne sont également
+        présents.
       </p>
+
+      <button id="refreshRankingButton">
+        🔄 Actualiser le classement
+      </button>
 
       <div id="rankingList"></div>
 
@@ -339,13 +408,15 @@
          PARAMÈTRES
     ========================== -->
 
-    <section id="settingsPage" class="hidden page">
+    <section
+      id="settingsPage"
+      class="hidden page"
+    >
 
       <h2>⚙️ Paramètres</h2>
 
-      <h3>
-        Modifier l'adresse e-mail
-      </h3>
+
+      <h3>Modifier l'adresse e-mail</h3>
 
       <input
         id="newEmail"
@@ -360,16 +431,14 @@
       >
 
       <button id="changeEmailButton">
-        Modifier mon e-mail
+        📧 Modifier mon e-mail
       </button>
 
 
       <hr>
 
 
-      <h3>
-        Supprimer mon compte
-      </h3>
+      <h3>Supprimer mon compte</h3>
 
       <input
         id="deletePassword"
@@ -396,10 +465,168 @@
 
 
     <!-- =========================
+         ADMINISTRATION
+         UNIQUEMENT CREATOR2026
+    ========================== -->
+
+    <section
+      id="adminPage"
+      class="hidden page"
+    >
+
+      <h2>👑 Administration</h2>
+
+      <p>
+        Rechercher un joueur et lui attribuer
+        des récompenses.
+      </p>
+
+
+      <h3>🔎 Rechercher un joueur</h3>
+
+      <input
+        id="adminSearchPseudo"
+        placeholder="Pseudo du joueur"
+      >
+
+      <button id="adminSearchButton">
+        Rechercher
+      </button>
+
+      <div id="adminUserResult"></div>
+
+
+      <hr>
+
+
+      <h3>🪙 Donner des pièces</h3>
+
+      <input
+        id="adminCoins"
+        type="number"
+        min="0"
+        placeholder="Nombre de pièces"
+      >
+
+      <button id="adminGiveCoinsButton">
+        Donner les pièces
+      </button>
+
+
+      <hr>
+
+
+      <h3>✨ Donner de l'XP</h3>
+
+      <input
+        id="adminXp"
+        type="number"
+        min="0"
+        placeholder="Nombre d'XP"
+      >
+
+      <button id="adminGiveXpButton">
+        Donner l'XP
+      </button>
+
+
+      <hr>
+
+
+      <h3>🐺 Offrir une classe</h3>
+
+      <select id="adminClassSelect">
+
+        <option value="">
+          Choisir une classe
+        </option>
+
+        <option value="wolf1">
+          Loup-Garou 1
+        </option>
+
+        <option value="wolf2">
+          Loup-Garou 2
+        </option>
+
+        <option value="wolf3">
+          Loup-Garou 3
+        </option>
+
+        <option value="wolf4">
+          Loup-Garou certifié
+        </option>
+
+
+        <option value="seer1">
+          Voyante 1
+        </option>
+
+        <option value="seer2">
+          Voyante 2
+        </option>
+
+        <option value="seer3">
+          Voyante 3
+        </option>
+
+        <option value="seer4">
+          Voyante certifiée
+        </option>
+
+
+        <option value="witch1">
+          Sorcière 1
+        </option>
+
+        <option value="witch2">
+          Sorcière 2
+        </option>
+
+        <option value="witch3">
+          Sorcière 3
+        </option>
+
+        <option value="witch4">
+          Sorcière certifiée
+        </option>
+
+
+        <option value="hunter1">
+          Chasseur 1
+        </option>
+
+        <option value="hunter2">
+          Chasseur 2
+        </option>
+
+        <option value="hunter3">
+          Chasseur 3
+        </option>
+
+        <option value="hunter4">
+          Chasseur certifié
+        </option>
+
+      </select>
+
+      <button id="adminGiveClassButton">
+        🎁 Offrir cette classe
+      </button>
+
+      <p id="adminMessage"></p>
+
+    </section>
+
+
+    <!-- =========================
          RETOUR
     ========================== -->
 
-    <button id="backButton" class="hidden">
+    <button
+      id="backButton"
+      class="hidden"
+    >
       ← Retour au menu
     </button>
 
@@ -410,13 +637,19 @@
        MOT DE PASSE OUBLIÉ
   ========================== -->
 
-  <main id="forgotScreen" class="hidden">
+  <main
+    id="forgotScreen"
+    class="hidden"
+  >
 
     <div class="auth-card">
 
-      <h1>
-        🔑 Mot de passe oublié
-      </h1>
+      <h1>🔑 Mot de passe oublié</h1>
+
+      <p>
+        Entre ton pseudo pour demander une
+        réinitialisation.
+      </p>
 
       <input
         id="forgotPseudo"
@@ -424,13 +657,16 @@
       >
 
       <button id="sendResetButton">
-        Envoyer la demande
+        📧 Envoyer la demande
       </button>
 
       <p id="forgotMessage"></p>
 
-      <button id="backToLoginButton">
-        Retour
+      <button
+        id="backToLoginButton"
+        class="link-button"
+      >
+        ← Retour
       </button>
 
     </div>
@@ -438,7 +674,12 @@
   </main>
 
 
+  <!-- SOCKET.IO -->
+
   <script src="/socket.io/socket.io.js"></script>
+
+
+  <!-- SCRIPT DU JEU -->
 
   <script src="script.js"></script>
 
