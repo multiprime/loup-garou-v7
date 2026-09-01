@@ -545,15 +545,6 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (!database.users[pseudo]) {
-      socket.emit(
-        "roomError",
-        "Utilisateur introuvable."
-      );
-
-      return;
-    }
-
     if (!room.players.includes(pseudo)) {
       room.players.push(pseudo);
     }
