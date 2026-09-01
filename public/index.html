@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>🐺 Loup-Garou V7</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- =========================
+       CONNEXION / INSCRIPTION
+  ========================== -->
+
+  <main id="authScreen">
+
+    <div class="auth-card">
+
+      <h1>🐺 Loup-Garou V7</h1>
+
+      <p>
+        Crée ton compte et joue avec tes amis !
+      </p>
+
+
+      <div class="tabs">
+
+        <button id="loginTab" class="active">
+          Connexion
+        </button>
+
+        <button id="registerTab">
+          Créer un compte
+        </button>
+
+      </div>
+
+
+      <!-- CONNEXION -->
+
+      <form id="loginForm">
+
+        <input
+          id="loginPseudo"
+          type="text"
+          placeholder="Pseudo"
+          required
+        >
+
+        <input
+          id="loginPassword"
+          type="password"
+          placeholder="Mot de passe"
+          required
+        >
+
+        <button type="submit">
+          Se connecter
+        </button>
+
+        <button
+          type="button"
+          id="forgotPasswordButton"
+          class="link-button"
+        >
+          J'ai oublié mon mot de passe
+        </button>
+
+      </form>
+
+
+      <!-- INSCRIPTION -->
+
+      <form id="registerForm" class="hidden">
+
+        <input
+          id="registerPseudo"
+          type="text"
+          placeholder="Choisis ton pseudo"
+          required
+        >
+
+        <input
+          id="registerEmail"
+          type="email"
+          placeholder="Adresse e-mail"
+          required
+        >
+
+        <input
+          id="registerPassword"
+          type="password"
+          placeholder="Mot de passe"
+          required
+        >
+
+        <button type="submit">
+          Créer mon compte
+        </button>
+
+      </form>
+
+
+      <p id="authMessage"></p>
+
+    </div>
+
+  </main>
+
+
+  <!-- =========================
+       MENU PRINCIPAL
+  ========================== -->
+
+  <main id="menuScreen" class="hidden">
+
+    <header>
+
+      <div>
+
+        <div class="profile-icon" id="profileIcon">
+          🐺
+        </div>
+
+        <div>
+
+          <h2 id="playerName">
+            Joueur
+          </h2>
+
+          <p id="playerTitle">
+            Nouveau Villageois
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <div class="player-stats">
+
+        <span>
+          ⭐ Niveau
+          <strong id="playerLevel">1</strong>/100
+        </span>
+
+        <span>
+          ✨ <strong id="playerXp">0</strong> XP
+        </span>
+
+        <span>
+          🪙 <strong id="playerCoins">0</strong>
+        </span>
+
+        <span>
+          🏆 <strong id="playerTrophies">0</strong>
+        </span>
+
+      </div>
+
+    </header>
+
+
+    <section class="xp-section">
+
+      <h3>
+        Progression
+      </h3>
+
+      <div class="xp-bar">
+
+        <div
+          id="xpProgress"
+          class="xp-progress"
+          style="width: 0%"
+        ></div>
+
+      </div>
+
+    </section>
+
+
+    <!-- BOUTONS PRINCIPAUX -->
+
+    <section class="menu-buttons">
+
+      <button id="playButton">
+        🎮 Jouer en ligne
+      </button>
+
+      <button id="friendsButton">
+        👥 Amis
+      </button>
+
+      <button id="classesButton">
+        🐺 Classes
+      </button>
+
+      <button id="questsButton">
+        📜 Quêtes
+      </button>
+
+      <button id="rankingButton">
+        🏆 Classement
+      </button>
+
+      <button id="settingsButton">
+        ⚙️ Paramètres
+      </button>
+
+    </section>
+
+
+    <!-- =========================
+         SALON DE JEU
+    ========================== -->
+
+    <section id="gameLobby" class="hidden page">
+
+      <h2>🎮 Jouer en ligne</h2>
+
+      <button id="createRoomButton">
+        ➕ Créer une partie
+      </button>
+
+      <h3>
+        Rejoindre une partie
+      </h3>
+
+      <input
+        id="joinRoomCode"
+        placeholder="Code de la partie"
+      >
+
+      <button id="joinRoomButton">
+        Rejoindre
+      </button>
+
+      <h3>
+        Parties disponibles
+      </h3>
+
+      <div id="roomsList">
+
+        Aucune partie pour le moment.
+
+      </div>
+
+    </section>
+
+
+    <!-- =========================
+         CLASSES
+    ========================== -->
+
+    <section id="classesPage" class="hidden page">
+
+      <h2>🐺 Classes</h2>
+
+      <p>
+        Une classe équipée augmente tes chances
+        d'obtenir un rôle au début d'une partie.
+      </p>
+
+      <div id="classesList"></div>
+
+    </section>
+
+
+    <!-- =========================
+         QUÊTES
+    ========================== -->
+
+    <section id="questsPage" class="hidden page">
+
+      <h2>📜 Quêtes</h2>
+
+      <div id="questsList"></div>
+
+    </section>
+
+
+    <!-- =========================
+         AMIS
+    ========================== -->
+
+    <section id="friendsPage" class="hidden page">
+
+      <h2>👥 Amis</h2>
+
+      <input
+        id="friendSearch"
+        placeholder="Pseudo d'un joueur"
+      >
+
+      <button id="searchFriendButton">
+        Rechercher
+      </button>
+
+      <div id="friendResult"></div>
+
+      <h3>
+        Mes amis
+      </h3>
+
+      <div id="friendsList"></div>
+
+    </section>
+
+
+    <!-- =========================
+         CLASSEMENT
+    ========================== -->
+
+    <section id="rankingPage" class="hidden page">
+
+      <h2>🏆 Top 100 mondial</h2>
+
+      <p>
+        Classement selon le nombre de trophées.
+      </p>
+
+      <div id="rankingList"></div>
+
+    </section>
+
+
+    <!-- =========================
+         PARAMÈTRES
+    ========================== -->
+
+    <section id="settingsPage" class="hidden page">
+
+      <h2>⚙️ Paramètres</h2>
+
+      <h3>
+        Modifier l'adresse e-mail
+      </h3>
+
+      <input
+        id="newEmail"
+        type="email"
+        placeholder="Nouvelle adresse e-mail"
+      >
+
+      <input
+        id="emailPassword"
+        type="password"
+        placeholder="Ton mot de passe"
+      >
+
+      <button id="changeEmailButton">
+        Modifier mon e-mail
+      </button>
+
+
+      <hr>
+
+
+      <h3>
+        Supprimer mon compte
+      </h3>
+
+      <input
+        id="deletePassword"
+        type="password"
+        placeholder="Confirme ton mot de passe"
+      >
+
+      <button
+        id="deleteAccountButton"
+        class="danger"
+      >
+        🗑️ Supprimer mon compte
+      </button>
+
+
+      <hr>
+
+
+      <button id="logoutButton">
+        🚪 Se déconnecter
+      </button>
+
+    </section>
+
+
+    <!-- =========================
+         RETOUR
+    ========================== -->
+
+    <button id="backButton" class="hidden">
+      ← Retour au menu
+    </button>
+
+  </main>
+
+
+  <!-- =========================
+       MOT DE PASSE OUBLIÉ
+  ========================== -->
+
+  <main id="forgotScreen" class="hidden">
+
+    <div class="auth-card">
+
+      <h1>
+        🔑 Mot de passe oublié
+      </h1>
+
+      <input
+        id="forgotPseudo"
+        placeholder="Ton pseudo"
+      >
+
+      <button id="sendResetButton">
+        Envoyer la demande
+      </button>
+
+      <p id="forgotMessage"></p>
+
+      <button id="backToLoginButton">
+        Retour
+      </button>
+
+    </div>
+
+  </main>
+
+
+  <script src="/socket.io/socket.io.js"></script>
+
+  <script src="script.js"></script>
+
+</body>
+</html>
