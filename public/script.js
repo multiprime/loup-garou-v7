@@ -16,25 +16,121 @@ let isRoomHost = false;
 ===================================== */
 
 const CLASSES = [
-  { id: "wolf1", role: "🐺", name: "Loup-Garou 1", price: 1000, chance: 10 },
-  { id: "wolf2", role: "🐺", name: "Loup-Garou 2", price: 1200, chance: 20 },
-  { id: "wolf3", role: "🐺", name: "Loup-Garou 3", price: 1300, chance: 35 },
-  { id: "wolf4", role: "🐺", name: "Loup-Garou certifié", price: 1500, chance: 50 },
+  {
+    id: "wolf1",
+    role: "🐺",
+    name: "Loup-Garou 1",
+    price: 1000,
+    chance: 10
+  },
+  {
+    id: "wolf2",
+    role: "🐺",
+    name: "Loup-Garou 2",
+    price: 1200,
+    chance: 20
+  },
+  {
+    id: "wolf3",
+    role: "🐺",
+    name: "Loup-Garou 3",
+    price: 1300,
+    chance: 35
+  },
+  {
+    id: "wolf4",
+    role: "🐺",
+    name: "Loup-Garou certifié",
+    price: 1500,
+    chance: 50
+  },
 
-  { id: "seer1", role: "🔮", name: "Voyante 1", price: 200, chance: 10 },
-  { id: "seer2", role: "🔮", name: "Voyante 2", price: 250, chance: 20 },
-  { id: "seer3", role: "🔮", name: "Voyante 3", price: 300, chance: 30 },
-  { id: "seer4", role: "🔮", name: "Voyante certifiée", price: 400, chance: 50 },
+  {
+    id: "seer1",
+    role: "🔮",
+    name: "Voyante 1",
+    price: 200,
+    chance: 10
+  },
+  {
+    id: "seer2",
+    role: "🔮",
+    name: "Voyante 2",
+    price: 250,
+    chance: 20
+  },
+  {
+    id: "seer3",
+    role: "🔮",
+    name: "Voyante 3",
+    price: 300,
+    chance: 30
+  },
+  {
+    id: "seer4",
+    role: "🔮",
+    name: "Voyante certifiée",
+    price: 400,
+    chance: 50
+  },
 
-  { id: "witch1", role: "🧪", name: "Sorcière 1", price: 350, chance: 10 },
-  { id: "witch2", role: "🧪", name: "Sorcière 2", price: 450, chance: 20 },
-  { id: "witch3", role: "🧪", name: "Sorcière 3", price: 500, chance: 30 },
-  { id: "witch4", role: "🧪", name: "Sorcière certifiée", price: 600, chance: 50 },
+  {
+    id: "witch1",
+    role: "🧪",
+    name: "Sorcière 1",
+    price: 350,
+    chance: 10
+  },
+  {
+    id: "witch2",
+    role: "🧪",
+    name: "Sorcière 2",
+    price: 450,
+    chance: 20
+  },
+  {
+    id: "witch3",
+    role: "🧪",
+    name: "Sorcière 3",
+    price: 500,
+    chance: 30
+  },
+  {
+    id: "witch4",
+    role: "🧪",
+    name: "Sorcière certifiée",
+    price: 600,
+    chance: 50
+  },
 
-  { id: "hunter1", role: "🎯", name: "Chasseur 1", price: 100, chance: 10 },
-  { id: "hunter2", role: "🎯", name: "Chasseur 2", price: 150, chance: 20 },
-  { id: "hunter3", role: "🎯", name: "Chasseur 3", price: 200, chance: 30 },
-  { id: "hunter4", role: "🎯", name: "Chasseur certifié", price: 300, chance: 50 }
+  {
+    id: "hunter1",
+    role: "🎯",
+    name: "Chasseur 1",
+    price: 100,
+    chance: 10
+  },
+  {
+    id: "hunter2",
+    role: "🎯",
+    name: "Chasseur 2",
+    price: 150,
+    chance: 20
+  },
+  {
+    id: "hunter3",
+    role: "🎯",
+    name: "Chasseur 3",
+    price: 200,
+    chance: 30
+  },
+  {
+    id: "hunter4",
+    role: "🎯",
+    name: "Chasseur certifié",
+    price: 300,
+    chance: 50
+  }
 ];
 
 
@@ -52,21 +148,21 @@ const QUESTS = [
   },
   {
     id: "play3",
-    title: "🎮 Joueur débutant",
+    title: "🏘️ Habitant du village",
     description: "Jouer 3 parties.",
-    xp: 200,
+    xp: 150,
     coins: 100
   },
   {
     id: "play5",
-    title: "🏘️ Villageois actif",
+    title: "🎮 Joueur actif",
     description: "Jouer 5 parties.",
-    xp: 300,
+    xp: 250,
     coins: 150
   },
   {
     id: "play10",
-    title: "🔥 Joueur expérimenté",
+    title: "🔥 Villageois expérimenté",
     description: "Jouer 10 parties.",
     xp: 500,
     coins: 200
@@ -80,10 +176,10 @@ const QUESTS = [
   },
   {
     id: "win3",
-    title: "🥇 Vainqueur",
+    title: "⭐ Trois victoires",
     description: "Gagner 3 parties.",
-    xp: 500,
-    coins: 250
+    xp: 600,
+    coins: 200
   },
   {
     id: "win10",
@@ -96,7 +192,7 @@ const QUESTS = [
 
 
 /* =====================================
-   NAVIGATION
+   PAGES
 ===================================== */
 
 const pages = [
@@ -105,17 +201,21 @@ const pages = [
   "questsPage",
   "friendsPage",
   "rankingPage",
-  "settingsPage"
+  "settingsPage",
+  "adminPage"
 ];
+
 
 function hidePages() {
 
   pages.forEach((page) => {
+
     const element = $(page);
 
     if (element) {
       element.classList.add("hidden");
     }
+
   });
 
   $("backButton").classList.add("hidden");
@@ -126,7 +226,11 @@ function openPage(pageId) {
 
   hidePages();
 
-  $(pageId).classList.remove("hidden");
+  const page = $(pageId);
+
+  if (page) {
+    page.classList.remove("hidden");
+  }
 
   $("backButton").classList.remove("hidden");
 }
@@ -135,13 +239,13 @@ function openPage(pageId) {
 $("backButton").addEventListener("click", hidePages);
 
 
+/* =====================================
+   NAVIGATION
+===================================== */
+
 $("playButton").addEventListener("click", () => {
 
   openPage("gameLobby");
-
-  currentRoomCode = null;
-
-  $("startGameButton").classList.add("hidden");
 
   loadRooms();
 
@@ -244,7 +348,8 @@ $("registerForm").addEventListener("submit", async (event) => {
 
   const password = $("registerPassword").value;
 
-  $("authMessage").textContent = "⏳ Création du compte...";
+  $("authMessage").textContent =
+    "⏳ Création du compte...";
 
   try {
 
@@ -272,11 +377,10 @@ $("registerForm").addEventListener("submit", async (event) => {
         "❌ " + (data.message || "Erreur.");
 
       return;
-
     }
 
     $("authMessage").textContent =
-      "✅ Compte créé avec succès !";
+      "✅ Compte créé ! Tu reçois 50 pièces 🎁";
 
     loginUser(data.user);
 
@@ -329,10 +433,10 @@ $("loginForm").addEventListener("submit", async (event) => {
     if (!response.ok) {
 
       $("authMessage").textContent =
-        "❌ " + (data.message || "Connexion impossible.");
+        "❌ " +
+        (data.message || "Connexion impossible.");
 
       return;
-
     }
 
     loginUser(data.user);
@@ -366,13 +470,25 @@ function loginUser(user) {
     pseudo: user.pseudo
   });
 
-  $("forgotScreen").classList.add("hidden");
-
   $("authScreen").classList.add("hidden");
+
+  $("forgotScreen").classList.add("hidden");
 
   $("menuScreen").classList.remove("hidden");
 
   updateProfile();
+
+  updateAdminButton();
+
+}
+
+
+function saveCurrentUser() {
+
+  localStorage.setItem(
+    "lgv7_user",
+    JSON.stringify(currentUser)
+  );
 
 }
 
@@ -385,7 +501,8 @@ function updateProfile() {
     currentUser.pseudo;
 
   $("playerTitle").textContent =
-    currentUser.title || "Nouveau Villageois";
+    currentUser.title ||
+    "Nouveau Villageois";
 
   $("profileIcon").textContent =
     currentUser.icon || "🐺";
@@ -407,16 +524,6 @@ function updateProfile() {
 }
 
 
-function saveCurrentUser() {
-
-  localStorage.setItem(
-    "lgv7_user",
-    JSON.stringify(currentUser)
-  );
-
-}
-
-
 function updateXpBar() {
 
   if (!currentUser) return;
@@ -425,10 +532,8 @@ function updateXpBar() {
 
   const level = currentUser.level || 1;
 
-  const xpForNextLevel = Math.max(
-    100,
-    level * 500
-  );
+  const xpForNextLevel =
+    Math.max(100, level * 500);
 
   const percentage = Math.min(
     100,
@@ -444,12 +549,67 @@ function updateXpBar() {
 
 
 /* =====================================
+   ADMIN BUTTON
+===================================== */
+
+function updateAdminButton() {
+
+  const adminButton =
+    $("adminButton");
+
+  if (!adminButton) return;
+
+  if (
+    currentUser &&
+    currentUser.pseudo.toLowerCase() ===
+    "creator2026"
+  ) {
+
+    adminButton.classList.remove("hidden");
+
+  } else {
+
+    adminButton.classList.add("hidden");
+
+  }
+
+}
+
+
+if ($("adminButton")) {
+
+  $("adminButton").addEventListener(
+    "click",
+    () => {
+
+      if (
+        !currentUser ||
+        currentUser.pseudo.toLowerCase() !==
+        "creator2026"
+      ) {
+
+        alert("Accès refusé.");
+
+        return;
+
+      }
+
+      openPage("adminPage");
+
+    }
+  );
+
+}
+
+
+/* =====================================
    CLASSES
 ===================================== */
 
 function renderClasses() {
 
-  const container = $("classesList");
+  const container =
+    $("classesList");
 
   container.innerHTML = "";
 
@@ -460,7 +620,8 @@ function renderClasses() {
         .includes(classe.id);
 
     const equipped =
-      currentUser.equippedClass === classe.id;
+      currentUser.equippedClass ===
+      classe.id;
 
     const card =
       document.createElement("div");
@@ -471,7 +632,10 @@ function renderClasses() {
 
     card.innerHTML = `
       <div>
-        <h3>${classe.role} ${classe.name}</h3>
+        <h3>
+          ${classe.role}
+          ${classe.name}
+        </h3>
 
         <p>
           🪙 ${classe.price}
@@ -490,8 +654,12 @@ function renderClasses() {
       </button>
     `;
 
-    card.querySelector("button")
-      .addEventListener("click", () => {
+    const button =
+      card.querySelector("button");
+
+    button.addEventListener(
+      "click",
+      () => {
 
         if (equipped) return;
 
@@ -505,7 +673,8 @@ function renderClasses() {
 
         }
 
-      });
+      }
+    );
 
     container.appendChild(card);
 
@@ -519,20 +688,22 @@ async function buyClass(classId) {
   try {
 
     const response =
-      await fetch("/api/classes/buy", {
+      await fetch(
+        "/api/classes/buy",
+        {
+          method: "POST",
 
-        method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          pseudo: currentUser.pseudo,
-          classId
-        })
-
-      });
+          body: JSON.stringify({
+            pseudo: currentUser.pseudo,
+            classId
+          })
+        }
+      );
 
     const data =
       await response.json();
@@ -540,8 +711,8 @@ async function buyClass(classId) {
     if (!response.ok) {
 
       alert(
-        "❌ " +
-        (data.message || "Erreur.")
+        data.message ||
+        "Erreur."
       );
 
       return;
@@ -556,11 +727,11 @@ async function buyClass(classId) {
 
     renderClasses();
 
-    alert("✅ Classe achetée !");
+    alert("🎉 Classe achetée !");
 
   } catch {
 
-    alert("❌ Erreur de connexion.");
+    alert("Erreur de connexion.");
 
   }
 
@@ -572,30 +743,29 @@ async function equipClass(classId) {
   try {
 
     const response =
-      await fetch("/api/classes/equip", {
+      await fetch(
+        "/api/classes/equip",
+        {
+          method: "POST",
 
-        method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
 
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-          pseudo: currentUser.pseudo,
-          classId
-        })
-
-      });
+          body: JSON.stringify({
+            pseudo: currentUser.pseudo,
+            classId
+          })
+        }
+      );
 
     const data =
       await response.json();
 
     if (!response.ok) {
 
-      alert(
-        "❌ " +
-        (data.message || "Erreur.")
-      );
+      alert(data.message);
 
       return;
 
@@ -613,7 +783,7 @@ async function equipClass(classId) {
 
   } catch {
 
-    alert("❌ Erreur de connexion.");
+    alert("Erreur de connexion.");
 
   }
 
@@ -646,7 +816,7 @@ function renderQuests() {
 
       <p>
         ✨ ${quest.xp} XP
-        • 🪙 ${quest.coins} pièces
+        • 🪙 ${quest.coins}
       </p>
     `;
 
@@ -658,7 +828,7 @@ function renderQuests() {
 
 
 /* =====================================
-   CRÉER UNE PARTIE
+   CRÉER SALON
 ===================================== */
 
 $("createRoomButton").addEventListener(
@@ -667,20 +837,18 @@ $("createRoomButton").addEventListener(
 
     if (!currentUser) {
 
-      alert(
-        "Tu dois être connecté."
-      );
+      alert("Tu dois être connecté.");
 
       return;
 
     }
 
-    socket.emit("createRoom", {
-
-      pseudo:
-        currentUser.pseudo
-
-    });
+    socket.emit(
+      "createRoom",
+      {
+        pseudo: currentUser.pseudo
+      }
+    );
 
   }
 );
@@ -715,7 +883,7 @@ socket.on(
 
 
 /* =====================================
-   REJOINDRE UNE PARTIE
+   REJOINDRE SALON
 ===================================== */
 
 $("joinRoomButton").addEventListener(
@@ -724,9 +892,7 @@ $("joinRoomButton").addEventListener(
 
     if (!currentUser) {
 
-      alert(
-        "Tu dois être connecté."
-      );
+      alert("Tu dois être connecté.");
 
       return;
 
@@ -740,22 +906,20 @@ $("joinRoomButton").addEventListener(
 
     if (!code) {
 
-      alert(
-        "Entre le code de la partie."
-      );
+      alert("Entre un code.");
 
       return;
 
     }
 
-    socket.emit("joinRoom", {
-
-      code,
-
-      pseudo:
-        currentUser.pseudo
-
-    });
+    socket.emit(
+      "joinRoom",
+      {
+        code,
+        pseudo:
+          currentUser.pseudo
+      }
+    );
 
   }
 );
@@ -777,8 +941,7 @@ socket.on(
     renderCurrentRoom(room);
 
     alert(
-      "✅ Tu as rejoint la partie " +
-      room.code
+      "✅ Tu as rejoint la partie !"
     );
 
   }
@@ -790,7 +953,8 @@ socket.on(
   (room) => {
 
     if (
-      currentRoomCode === room.code
+      currentRoomCode ===
+      room.code
     ) {
 
       renderCurrentRoom(room);
@@ -805,8 +969,85 @@ socket.on(
   "roomError",
   (message) => {
 
+    alert("❌ " + message);
+
+  }
+);
+
+
+/* =====================================
+   LANCER PARTIE
+===================================== */
+
+$("startGameButton").addEventListener(
+  "click",
+  () => {
+
+    if (!currentRoomCode) {
+
+      alert("Aucune partie.");
+
+      return;
+
+    }
+
+    socket.emit(
+      "startGame",
+      {
+        code:
+          currentRoomCode,
+
+        pseudo:
+          currentUser.pseudo
+      }
+    );
+
+  }
+);
+
+
+socket.on(
+  "gameStarted",
+  (game) => {
+
+    $("startGameButton")
+      .classList.add("hidden");
+
+    $("roomsList").innerHTML = `
+      <div class="room-card">
+
+        <h2>
+          🐺 La partie commence !
+        </h2>
+
+        <p>
+          Les joueurs sont prêts :
+        </p>
+
+        <div id="gamePlayers"></div>
+
+      </div>
+    `;
+
+    const players =
+      $("gamePlayers");
+
+    game.players.forEach(
+      (pseudo) => {
+
+        const p =
+          document.createElement("p");
+
+        p.textContent =
+          "👤 " + pseudo;
+
+        players.appendChild(p);
+
+      }
+    );
+
     alert(
-      "❌ " + message
+      "🐺 La partie commence !"
     );
 
   }
@@ -814,7 +1055,7 @@ socket.on(
 
 
 /* =====================================
-   AFFICHER LE SALON
+   AFFICHAGE SALON
 ===================================== */
 
 function renderCurrentRoom(room) {
@@ -832,11 +1073,6 @@ function renderCurrentRoom(room) {
       <p>
         👑 Créateur :
         ${room.host}
-      </p>
-
-      <p>
-        👥 ${room.players.length}
-        joueur(s)
       </p>
 
       <h4>Joueurs :</h4>
@@ -858,8 +1094,7 @@ function renderCurrentRoom(room) {
       player.textContent =
         "👤 " + pseudo;
 
-      playersContainer
-        .appendChild(player);
+      playersContainer.appendChild(player);
 
     }
   );
@@ -868,114 +1103,7 @@ function renderCurrentRoom(room) {
 
 
 /* =====================================
-   LANCER LA PARTIE
-===================================== */
-
-$("startGameButton").addEventListener(
-  "click",
-  () => {
-
-    if (!currentUser) {
-
-      alert(
-        "Tu dois être connecté."
-      );
-
-      return;
-
-    }
-
-    if (!currentRoomCode) {
-
-      alert(
-        "Aucune partie créée."
-      );
-
-      return;
-
-    }
-
-    if (!isRoomHost) {
-
-      alert(
-        "Seul le créateur peut lancer."
-      );
-
-      return;
-
-    }
-
-    socket.emit(
-      "startGame",
-      {
-
-        code:
-          currentRoomCode,
-
-        pseudo:
-          currentUser.pseudo
-
-      }
-    );
-
-  }
-);
-
-
-socket.on(
-  "gameStarted",
-  (game) => {
-
-    $("startGameButton")
-      .classList.add("hidden");
-
-    const container =
-      $("roomsList");
-
-    container.innerHTML = `
-      <div class="room-card">
-
-        <h2>
-          🐺 La partie commence !
-        </h2>
-
-        <p>
-          ${game.players.length}
-          joueurs participent.
-        </p>
-
-        <h3>
-          Les rôles ont été distribués.
-        </h3>
-
-        <div id="gamePlayers"></div>
-
-      </div>
-    `;
-
-    const gamePlayers =
-      $("gamePlayers");
-
-    game.players.forEach(
-      (pseudo) => {
-
-        const p =
-          document.createElement("p");
-
-        p.textContent =
-          "👤 " + pseudo;
-
-        gamePlayers.appendChild(p);
-
-      }
-    );
-
-  }
-);
-
-
-/* =====================================
-   LISTE DES PARTIES
+   LISTE SALONS
 ===================================== */
 
 function loadRooms() {
@@ -1015,13 +1143,10 @@ socket.on(
           "room-card";
 
         card.innerHTML = `
-          <h3>
-            🎮 ${room.code}
-          </h3>
-
-          <p>
-            👑 ${room.host}
-          </p>
+          <strong>
+            🎮 Code :
+            ${room.code}
+          </strong>
 
           <p>
             👥
@@ -1043,13 +1168,11 @@ socket.on(
               socket.emit(
                 "joinRoom",
                 {
-
                   code:
                     room.code,
 
                   pseudo:
                     currentUser.pseudo
-
                 }
               );
 
@@ -1078,17 +1201,13 @@ $("searchFriendButton").addEventListener(
         .value
         .trim();
 
-    if (!pseudo) {
+    if (!pseudo) return;
 
-      $("friendResult").textContent =
-        "Entre un pseudo.";
+    const result =
+      $("friendResult");
 
-      return;
-
-    }
-
-    $("friendResult").textContent =
-      "⏳ Recherche...";
+    result.textContent =
+      "Recherche...";
 
     try {
 
@@ -1103,10 +1222,8 @@ $("searchFriendButton").addEventListener(
 
       if (!response.ok) {
 
-        $("friendResult").textContent =
-          "❌ " +
-          (data.message ||
-          "Joueur introuvable.");
+        result.textContent =
+          "❌ Joueur introuvable.";
 
         return;
 
@@ -1115,13 +1232,13 @@ $("searchFriendButton").addEventListener(
       const user =
         data.user;
 
-      $("friendResult").innerHTML = `
+      result.innerHTML = `
         <div class="friend-card">
 
-          <h3>
+          <strong>
             ${user.icon || "🐺"}
             ${user.pseudo}
-          </h3>
+          </strong>
 
           <p>
             ${user.title ||
@@ -1129,46 +1246,62 @@ $("searchFriendButton").addEventListener(
           </p>
 
           <p>
-            ⭐ Niveau ${user.level || 1}
+            ⭐ Niveau
+            ${user.level}
+
+            • ✨
+            ${user.xp} XP
+
+            • 🪙
+            ${user.coins}
           </p>
 
           <p>
-            ✨ ${user.xp || 0} XP
+            🐺 Classe :
+            ${user.equippedClass || "Aucune"}
           </p>
 
-          <p>
-            🪙 ${user.coins || 0}
-          </p>
+          ${
+            user.pseudo ===
+            currentUser.pseudo
 
-          <p>
-            🏆 ${user.trophies || 0}
-          </p>
+              ? ""
 
-          <button id="addFriendButton">
-            ➕ Ajouter en ami
-          </button>
+              : `
+                <button
+                  id="addFriendButton"
+                >
+                  ➕ Ajouter en ami
+                </button>
+              `
+          }
 
         </div>
       `;
 
-      $("addFriendButton")
-        .addEventListener(
-          "click",
-          () => {
+      if (
+        $("addFriendButton")
+      ) {
 
-            alert(
-              "La demande d'ami sera ajoutée " +
-              "dans la prochaine version du serveur."
-            );
+        $("addFriendButton")
+          .addEventListener(
+            "click",
+            () => {
 
-          }
-        );
+              addFriend(
+                user.pseudo
+              );
+
+            }
+          );
+
+      }
 
     } catch (error) {
 
       console.error(error);
 
-      $("friendResult").textContent =
+      result.textContent =
         "❌ Erreur de connexion.";
 
     }
@@ -1177,14 +1310,144 @@ $("searchFriendButton").addEventListener(
 );
 
 
-/* =====================================
-   MES AMIS
-===================================== */
+async function addFriend(friendPseudo) {
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/friends/add",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            pseudo:
+              currentUser.pseudo,
+
+            friendPseudo
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    alert(data.message);
+
+    if (response.ok) {
+
+      loadFriends();
+
+    }
+
+  } catch {
+
+    alert(
+      "Erreur de connexion."
+    );
+
+  }
+
+}
+
 
 async function loadFriends() {
 
-  $("friendsList").textContent =
-    "Aucun ami pour le moment.";
+  const container =
+    $("friendsList");
+
+  container.textContent =
+    "Chargement...";
+
+  try {
+
+    const response =
+      await fetch(
+        "/api/friends/" +
+        encodeURIComponent(
+          currentUser.pseudo
+        )
+      );
+
+    const data =
+      await response.json();
+
+    if (!response.ok) {
+
+      container.textContent =
+        "Impossible de charger les amis.";
+
+      return;
+
+    }
+
+    if (!data.friends.length) {
+
+      container.textContent =
+        "Tu n'as pas encore d'amis.";
+
+      return;
+
+    }
+
+    container.innerHTML = "";
+
+    data.friends.forEach(
+      (friend) => {
+
+        const card =
+          document.createElement("div");
+
+        card.className =
+          "friend-card";
+
+        card.innerHTML = `
+          <strong>
+            ${friend.icon || "🐺"}
+            ${friend.pseudo}
+          </strong>
+
+          <p>
+            ${friend.title ||
+            "Nouveau Villageois"}
+          </p>
+
+          <p>
+            ⭐ Niveau
+            ${friend.level}
+
+            • ✨
+            ${friend.xp} XP
+
+            • 🪙
+            ${friend.coins}
+          </p>
+
+          <p>
+            🐺 Classe :
+            ${
+              friend.equippedClass ||
+              "Aucune"
+            }
+          </p>
+        `;
+
+        container.appendChild(card);
+
+      }
+    );
+
+  } catch {
+
+    container.textContent =
+      "❌ Erreur de connexion.";
+
+  }
 
 }
 
@@ -1199,7 +1462,7 @@ async function loadRanking() {
     $("rankingList");
 
   container.textContent =
-    "⏳ Chargement...";
+    "Chargement...";
 
   try {
 
@@ -1211,22 +1474,7 @@ async function loadRanking() {
     const data =
       await response.json();
 
-    if (!response.ok) {
-
-      throw new Error();
-
-    }
-
     container.innerHTML = "";
-
-    if (!data.users.length) {
-
-      container.textContent =
-        "Aucun joueur.";
-
-      return;
-
-    }
 
     data.users.forEach(
       (user, index) => {
@@ -1238,25 +1486,21 @@ async function loadRanking() {
           "ranking-card";
 
         card.innerHTML = `
-          <h3>
+          <strong>
             #${index + 1}
             ${user.icon || "🐺"}
             ${user.pseudo}
-          </h3>
+          </strong>
 
           <p>
-            🏆 ${user.trophies || 0}
+            🏆
+            ${user.trophies}
             trophée(s)
           </p>
 
           <p>
             ⭐ Niveau
-            ${user.level || 1}
-          </p>
-
-          <p>
-            ${user.title ||
-            "Nouveau Villageois"}
+            ${user.level}
           </p>
         `;
 
@@ -1265,14 +1509,228 @@ async function loadRanking() {
       }
     );
 
-  } catch (error) {
-
-    console.error(error);
+  } catch {
 
     container.textContent =
-      "❌ Impossible de charger le classement.";
+      "❌ Impossible de charger.";
 
   }
+
+}
+
+
+/* =====================================
+   ADMIN - RECHERCHE
+===================================== */
+
+if ($("adminSearchButton")) {
+
+  $("adminSearchButton").addEventListener(
+    "click",
+    async () => {
+
+      const targetPseudo =
+        $("adminSearch")
+          .value
+          .trim();
+
+      if (!targetPseudo) {
+
+        alert(
+          "Entre un pseudo."
+        );
+
+        return;
+
+      }
+
+      try {
+
+        const response =
+          await fetch(
+            "/api/users/" +
+            encodeURIComponent(
+              targetPseudo
+            )
+          );
+
+        const data =
+          await response.json();
+
+        if (!response.ok) {
+
+          $("adminResult").textContent =
+            "❌ Joueur introuvable.";
+
+          return;
+
+        }
+
+        const user =
+          data.user;
+
+        $("adminResult").innerHTML = `
+          <div class="friend-card">
+
+            <h3>
+              ${user.icon}
+              ${user.pseudo}
+            </h3>
+
+            <p>
+              ⭐ Niveau:
+              ${user.level}
+            </p>
+
+            <p>
+              ✨ XP:
+              ${user.xp}
+            </p>
+
+            <p>
+              🪙 Pièces:
+              ${user.coins}
+            </p>
+
+            <p>
+              🏆 Trophées:
+              ${user.trophies}
+            </p>
+
+          </div>
+        `;
+
+      } catch {
+
+        $("adminResult").textContent =
+          "Erreur.";
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =====================================
+   ADMIN - DONNER RÉCOMPENSE
+===================================== */
+
+if ($("adminGiveButton")) {
+
+  $("adminGiveButton").addEventListener(
+    "click",
+    async () => {
+
+      if (
+        !currentUser ||
+        currentUser.pseudo.toLowerCase() !==
+        "creator2026"
+      ) {
+
+        alert("Accès refusé.");
+
+        return;
+
+      }
+
+      const targetPseudo =
+        $("adminSearch")
+          .value
+          .trim();
+
+      const coins =
+        Number(
+          $("adminCoins").value
+        ) || 0;
+
+      const xp =
+        Number(
+          $("adminXp").value
+        ) || 0;
+
+      const levels =
+        Number(
+          $("adminLevels").value
+        ) || 0;
+
+      const classId =
+        $("adminClass").value;
+
+      if (!targetPseudo) {
+
+        alert(
+          "Recherche un joueur."
+        );
+
+        return;
+
+      }
+
+      try {
+
+        const response =
+          await fetch(
+            "/api/admin/give",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+
+                adminPseudo:
+                  currentUser.pseudo,
+
+                targetPseudo,
+
+                coins,
+
+                xp,
+
+                levels,
+
+                classId
+
+              })
+            }
+          );
+
+        const data =
+          await response.json();
+
+        alert(data.message);
+
+        if (
+          response.ok &&
+          data.user &&
+          data.user.pseudo ===
+          currentUser.pseudo
+        ) {
+
+          currentUser =
+            data.user;
+
+          saveCurrentUser();
+
+          updateProfile();
+
+        }
+
+      } catch {
+
+        alert(
+          "Erreur de connexion."
+        );
+
+      }
+
+    }
+  );
 
 }
 
@@ -1285,30 +1743,23 @@ $("logoutButton").addEventListener(
   "click",
   () => {
 
-    if (currentUser) {
-
-      socket.emit(
-        "userOffline",
-        {
-          pseudo:
-            currentUser.pseudo
-        }
-      );
-
-    }
+    socket.emit(
+      "userOffline",
+      {
+        pseudo:
+          currentUser?.pseudo
+      }
+    );
 
     localStorage.removeItem(
       "lgv7_user"
     );
 
-    currentUser =
-      null;
+    currentUser = null;
 
-    currentRoomCode =
-      null;
+    currentRoomCode = null;
 
-    isRoomHost =
-      false;
+    isRoomHost = false;
 
     $("startGameButton")
       .classList.add("hidden");
@@ -1326,33 +1777,18 @@ $("logoutButton").addEventListener(
 
 
 /* =====================================
-   CHANGER E-MAIL
+   CHANGER EMAIL
 ===================================== */
 
 $("changeEmailButton").addEventListener(
   "click",
   async () => {
 
-    if (!currentUser) return;
-
     const email =
-      $("newEmail")
-        .value
-        .trim();
+      $("newEmail").value.trim();
 
     const password =
-      $("emailPassword")
-        .value;
-
-    if (!email || !password) {
-
-      alert(
-        "Remplis tous les champs."
-      );
-
-      return;
-
-    }
+      $("emailPassword").value;
 
     try {
 
@@ -1360,7 +1796,6 @@ $("changeEmailButton").addEventListener(
         await fetch(
           "/api/account/email",
           {
-
             method: "POST",
 
             headers: {
@@ -1368,48 +1803,38 @@ $("changeEmailButton").addEventListener(
                 "application/json"
             },
 
-            body: JSON.stringify(
-              {
+            body: JSON.stringify({
+              pseudo:
+                currentUser.pseudo,
 
-                pseudo:
-                  currentUser.pseudo,
+              email,
 
-                email,
-
-                password
-
-              }
-            )
-
+              password
+            })
           }
         );
 
       const data =
         await response.json();
 
-      alert(
-        data.message
-      );
+      alert(data.message);
 
-      if (response.ok) {
+      if (
+        response.ok &&
+        data.user
+      ) {
 
-        currentUser.email =
-          email;
+        currentUser =
+          data.user;
 
         saveCurrentUser();
-
-        $("newEmail").value =
-          "";
-
-        $("emailPassword").value =
-          "";
 
       }
 
     } catch {
 
       alert(
-        "❌ Erreur de connexion."
+        "Erreur de connexion."
       );
 
     }
@@ -1426,28 +1851,18 @@ $("deleteAccountButton").addEventListener(
   "click",
   async () => {
 
-    if (!currentUser) return;
-
     const password =
-      $("deletePassword")
-        .value;
+      $("deletePassword").value;
 
-    if (!password) {
-
-      alert(
-        "Entre ton mot de passe."
-      );
+    if (
+      !confirm(
+        "Supprimer définitivement ton compte ?"
+      )
+    ) {
 
       return;
 
     }
-
-    const confirmed =
-      confirm(
-        "Supprimer définitivement ton compte ?"
-      );
-
-    if (!confirmed) return;
 
     try {
 
@@ -1455,7 +1870,6 @@ $("deleteAccountButton").addEventListener(
         await fetch(
           "/api/account/delete",
           {
-
             method: "POST",
 
             headers: {
@@ -1463,57 +1877,39 @@ $("deleteAccountButton").addEventListener(
                 "application/json"
             },
 
-            body: JSON.stringify(
-              {
+            body: JSON.stringify({
+              pseudo:
+                currentUser.pseudo,
 
-                pseudo:
-                  currentUser.pseudo,
-
-                password
-
-              }
-            )
-
+              password
+            })
           }
         );
 
       const data =
         await response.json();
 
-      if (!response.ok) {
+      if (response.ok) {
 
         alert(
-          "❌ " +
-          data.message
+          "Compte supprimé."
         );
 
-        return;
+        $("logoutButton").click();
+
+      } else {
+
+        alert(
+          data.message ||
+          "Erreur."
+        );
 
       }
-
-      alert(
-        "Compte supprimé."
-      );
-
-      localStorage.removeItem(
-        "lgv7_user"
-      );
-
-      currentUser =
-        null;
-
-      $("menuScreen")
-        .classList.add("hidden");
-
-      $("authScreen")
-        .classList.remove("hidden");
-
-      hidePages();
 
     } catch {
 
       alert(
-        "❌ Erreur de connexion."
+        "Erreur de connexion."
       );
 
     }
@@ -1550,9 +1946,6 @@ $("backToLoginButton").addEventListener(
     $("authScreen")
       .classList.remove("hidden");
 
-    $("forgotMessage").textContent =
-      "";
-
   }
 );
 
@@ -1566,25 +1959,12 @@ $("sendResetButton").addEventListener(
         .value
         .trim();
 
-    if (!pseudo) {
-
-      $("forgotMessage").textContent =
-        "Entre ton pseudo.";
-
-      return;
-
-    }
-
-    $("forgotMessage").textContent =
-      "⏳ Envoi...";
-
     try {
 
       const response =
         await fetch(
           "/api/password/forgot",
           {
-
             method: "POST",
 
             headers: {
@@ -1595,20 +1975,21 @@ $("sendResetButton").addEventListener(
             body: JSON.stringify({
               pseudo
             })
-
           }
         );
 
       const data =
         await response.json();
 
-      $("forgotMessage").textContent =
+      $("forgotMessage")
+        .textContent =
         data.message;
 
     } catch {
 
-      $("forgotMessage").textContent =
-        "❌ Erreur de connexion.";
+      $("forgotMessage")
+        .textContent =
+        "Erreur de connexion.";
 
     }
 
@@ -1638,38 +2019,10 @@ window.addEventListener(
 
       loginUser(user);
 
-    } catch (error) {
-
-      console.error(error);
+    } catch {
 
       localStorage.removeItem(
         "lgv7_user"
-      );
-
-    }
-
-  }
-);
-
-
-/* =====================================
-   RECONNEXION SOCKET
-===================================== */
-
-socket.on(
-  "connect",
-  () => {
-
-    if (currentUser) {
-
-      socket.emit(
-        "userOnline",
-        {
-
-          pseudo:
-            currentUser.pseudo
-
-        }
       );
 
     }
