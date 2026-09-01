@@ -14,7 +14,6 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-
 /* =========================
    BASE DE DONNÉES
 ========================= */
@@ -30,9 +29,7 @@ function loadData() {
     console.error("Erreur lecture data :", error);
   }
 
-  return {
-    users: {}
-  };
+  return { users: {} };
 }
 
 let database = loadData();
@@ -44,7 +41,6 @@ function saveData() {
     "utf8"
   );
 }
-
 
 /* =========================
    CLASSES
@@ -82,11 +78,10 @@ function publicUser(user) {
     trophies: user.trophies,
     icon: user.icon,
     title: user.title,
-    classes: user.classes,
-    equippedClass: user.equippedClass
+    classes: user.classes || [],
+    equippedClass: user.equippedClass || null
   };
 }
-
 
 /* =========================
    INSCRIPTION
@@ -138,23 +133,18 @@ app.post("/api/register", async (req, res) => {
       pseudo,
       email,
       passwordHash,
-
       level: 1,
       xp: 0,
       coins: 0,
       trophies: 0,
-
       icon: "🐺",
       title: "Nouveau Villageois",
-
       classes: [],
       equippedClass: null,
-
       createdAt: new Date().toISOString()
     };
 
     database.users[pseudo] = user;
-
     saveData();
 
     res.status(201).json({
@@ -164,13 +154,11 @@ app.post("/api/register", async (req, res) => {
 
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       message: "Erreur serveur."
     });
   }
 });
-
 
 /* =========================
    CONNEXION
@@ -207,13 +195,11 @@ app.post("/api/login", async (req, res) => {
 
   } catch (error) {
     console.error(error);
-
     res.status(500).json({
       message: "Erreur serveur."
     });
   }
 });
-
 
 /* =========================
    ACHETER UNE CLASSE
@@ -224,9 +210,7 @@ app.post("/api/classes/buy", (req, res) => {
   const classId = String(req.body.classId || "");
 
   const user = database.users[pseudo];
-  const classe = CLASSES.find(
-    (item) => item.id === classId
-  );
+  const classe = CLASSES.find((item) => item.id === classId);
 
   if (!user || !classe) {
     return res.status(400).json({
@@ -257,7 +241,6 @@ app.post("/api/classes/buy", (req, res) => {
   });
 });
 
-
 /* =========================
    ÉQUIPER UNE CLASSE
 ========================= */
@@ -268,17 +251,13 @@ app.post("/api/classes/equip", (req, res) => {
 
   const user = database.users[pseudo];
 
-  if (
-    !user ||
-    !user.classes.includes(classId)
-  ) {
+  if (!user || !user.classes.includes(classId)) {
     return res.status(400).json({
       message: "Tu ne possèdes pas cette classe."
     });
   }
 
   user.equippedClass = classId;
-
   saveData();
 
   res.json({
@@ -287,14 +266,12 @@ app.post("/api/classes/equip", (req, res) => {
   });
 });
 
-
 /* =========================
    PROFIL JOUEUR
 ========================= */
 
 app.get("/api/users/:pseudo", (req, res) => {
-  const user =
-    database.users[req.params.pseudo];
+  const user = database.users[req.params.pseudo];
 
   if (!user) {
     return res.status(404).json({
@@ -307,24 +284,18 @@ app.get("/api/users/:pseudo", (req, res) => {
   });
 });
 
-
 /* =========================
-   CLASSEMENT TOP 100
+   CLASSEMENT
 ========================= */
 
 app.get("/api/ranking", (req, res) => {
-  const users =
-    Object.values(database.users)
-      .sort(
-        (a, b) =>
-          b.trophies - a.trophies
-      )
-      .slice(0, 100)
-      .map(publicUser);
+  const users = Object.values(database.users)
+    .sort((a, b) => b.trophies - a.trophies)
+    .slice(0, 100)
+    .map(publicUser);
 
   res.json({ users });
 });
-
 
 /* =========================
    CHANGER E-MAIL
@@ -333,12 +304,8 @@ app.get("/api/ranking", (req, res) => {
 app.post("/api/account/email", async (req, res) => {
   try {
     const pseudo = String(req.body.pseudo || "");
-    const email = String(req.body.email || "")
-      .trim()
-      .toLowerCase();
-
-    const password =
-      String(req.body.password || "");
+    const email = String(req.body.email || "").trim().toLowerCase();
+    const password = String(req.body.password || "");
 
     const user = database.users[pseudo];
 
@@ -360,20 +327,18 @@ app.post("/api/account/email", async (req, res) => {
     }
 
     user.email = email;
-
     saveData();
 
     res.json({
       message: "Adresse e-mail modifiée !"
     });
 
-  } catch {
+  } catch (error) {
     res.status(500).json({
       message: "Erreur serveur."
     });
   }
 });
-
 
 /* =========================
    SUPPRIMER COMPTE
@@ -382,8 +347,7 @@ app.post("/api/account/email", async (req, res) => {
 app.post("/api/account/delete", async (req, res) => {
   try {
     const pseudo = String(req.body.pseudo || "");
-    const password =
-      String(req.body.password || "");
+    const password = String(req.body.password || "");
 
     const user = database.users[pseudo];
 
@@ -405,20 +369,18 @@ app.post("/api/account/delete", async (req, res) => {
     }
 
     delete database.users[pseudo];
-
     saveData();
 
     res.json({
       message: "Compte supprimé."
     });
 
-  } catch {
+  } catch (error) {
     res.status(500).json({
       message: "Erreur serveur."
     });
   }
 });
-
 
 /* =========================
    MOT DE PASSE OUBLIÉ
@@ -431,9 +393,8 @@ app.post("/api/password/forgot", (req, res) => {
   });
 });
 
-
 /* =========================
-   SALONS
+   SALONS MULTIJOUEURS
 ========================= */
 
 const rooms = {};
@@ -446,7 +407,6 @@ function generateRoomCode() {
       .toString(36)
       .substring(2, 7)
       .toUpperCase();
-
   } while (rooms[code]);
 
   return code;
@@ -469,34 +429,24 @@ function broadcastRooms() {
   io.emit("roomsList", list);
 }
 
-
 /* =========================
    SOCKET.IO
 ========================= */
 
 io.on("connection", (socket) => {
 
-  console.log(
-    "Joueur connecté :",
-    socket.id
-  );
-
+  console.log("Joueur connecté :", socket.id);
 
   socket.on("userOnline", ({ pseudo }) => {
     socket.pseudo = pseudo;
   });
 
-
   /* CRÉER UNE PARTIE */
 
   socket.on("createRoom", ({ pseudo }) => {
 
-    if (!database.users[pseudo]) {
-      socket.emit(
-        "roomError",
-        "Utilisateur introuvable."
-      );
-
+    if (!pseudo || pseudo.trim().length < 1) {
+      socket.emit("roomError", "Pseudo invalide.");
       return;
     }
 
@@ -517,13 +467,14 @@ io.on("connection", (socket) => {
     );
 
     broadcastRooms();
-
   });
 
-
-  /* REJOINDRE UNE PARTIE */
+  /* REJOINDRE UNE PARTIE - CORRIGÉ */
 
   socket.on("joinRoom", ({ code, pseudo }) => {
+
+    code = String(code || "").trim().toUpperCase();
+    pseudo = String(pseudo || "").trim();
 
     const room = rooms[code];
 
@@ -532,7 +483,6 @@ io.on("connection", (socket) => {
         "roomError",
         "Partie introuvable."
       );
-
       return;
     }
 
@@ -541,9 +491,18 @@ io.on("connection", (socket) => {
         "roomError",
         "La partie a déjà commencé."
       );
-
       return;
     }
+
+    if (!pseudo) {
+      socket.emit(
+        "roomError",
+        "Pseudo invalide."
+      );
+      return;
+    }
+
+    /* ICI : aucune vérification database.users[pseudo] */
 
     if (!room.players.includes(pseudo)) {
       room.players.push(pseudo);
@@ -562,112 +521,83 @@ io.on("connection", (socket) => {
     );
 
     broadcastRooms();
-
   });
-
 
   /* LANCER LA PARTIE */
 
-  socket.on(
-    "startGame",
-    ({ code, pseudo }) => {
+  socket.on("startGame", ({ code, pseudo }) => {
 
-      const room = rooms[code];
+    const room = rooms[code];
 
-      if (!room) {
-        socket.emit(
-          "roomError",
-          "Partie introuvable."
-        );
-
-        return;
-      }
-
-      /* Seul le créateur lance */
-
-      if (room.host !== pseudo) {
-        socket.emit(
-          "roomError",
-          "Seul le créateur peut lancer la partie."
-        );
-
-        return;
-      }
-
-      /* Minimum 2 joueurs */
-
-      if (room.players.length < 2) {
-        socket.emit(
-          "roomError",
-          "Il faut au moins 2 joueurs."
-        );
-
-        return;
-      }
-
-      room.started = true;
-
-      console.log(
-        "🐺 Partie démarrée :",
-        code
+    if (!room) {
+      socket.emit(
+        "roomError",
+        "Partie introuvable."
       );
-
-      io.to(code).emit(
-        "gameStarted",
-        {
-          code: room.code,
-          players: room.players
-        }
-      );
-
-      broadcastRooms();
-
+      return;
     }
-  );
 
+    if (room.host !== pseudo) {
+      socket.emit(
+        "roomError",
+        "Seul le créateur peut lancer la partie."
+      );
+      return;
+    }
+
+    if (room.players.length < 2) {
+      socket.emit(
+        "roomError",
+        "Il faut au moins 2 joueurs."
+      );
+      return;
+    }
+
+    room.started = true;
+
+    console.log(
+      "🐺 Partie démarrée :",
+      code
+    );
+
+    io.to(code).emit(
+      "gameStarted",
+      {
+        code: room.code,
+        players: room.players
+      }
+    );
+
+    broadcastRooms();
+  });
 
   /* LISTE DES SALONS */
 
   socket.on("getRooms", () => {
 
     const list = Object.values(rooms)
-      .filter(
-        (room) => !room.started
-      )
+      .filter((room) => !room.started)
       .map(publicRoom);
 
-    socket.emit(
-      "roomsList",
-      list
-    );
-
+    socket.emit("roomsList", list);
   });
 
-
   socket.on("disconnect", () => {
-
-    console.log(
-      "Joueur déconnecté :",
-      socket.id
-    );
-
+    console.log("Joueur déconnecté :", socket.id);
   });
 
 });
 
-
 /* =========================
-   TEST SERVEUR
+   TEST
 ========================= */
 
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    message:
-      "Loup-Garou V7 fonctionne !"
+    message: "Loup-Garou V7 fonctionne !"
   });
 });
-
 
 /* =========================
    LANCEMENT
@@ -675,7 +605,6 @@ app.get("/api/health", (req, res) => {
 
 server.listen(PORT, () => {
   console.log(
-    "🐺 Serveur démarré sur le port " +
-    PORT
+    "🐺 Serveur démarré sur le port " + PORT
   );
 });
