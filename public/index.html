@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
   <meta charset="UTF-8">
 
@@ -40,8 +39,6 @@
 
       </div>
 
-      <!-- CONNEXION -->
-
       <form id="loginForm">
 
         <input
@@ -71,8 +68,6 @@
         </button>
 
       </form>
-
-      <!-- INSCRIPTION -->
 
       <form id="registerForm" class="hidden">
 
@@ -137,7 +132,6 @@
         </div>
 
       </div>
-
 
       <div class="player-stats">
 
@@ -209,8 +203,6 @@
       <button id="settingsButton">
         ⚙️ Paramètres
       </button>
-
-      <!-- ADMIN UNIQUEMENT -->
 
       <button id="adminButton" class="hidden">
         👑 Administration
@@ -355,9 +347,7 @@
         Modifier mon e-mail
       </button>
 
-
       <hr>
-
 
       <h3>Supprimer mon compte</h3>
 
@@ -374,9 +364,7 @@
         🗑️ Supprimer mon compte
       </button>
 
-
       <hr>
-
 
       <button id="logoutButton">
         🚪 Se déconnecter
@@ -397,7 +385,6 @@
         Rechercher un joueur et lui donner des récompenses.
       </p>
 
-
       <h3>🔎 Rechercher un joueur</h3>
 
       <input
@@ -407,21 +394,14 @@
       >
 
       <button id="adminSearchButton">
-        Rechercher
+        🔎 Rechercher
       </button>
 
       <div id="adminPlayerResult"></div>
 
-
       <hr>
 
-
       <h3>🎁 Donner une récompense</h3>
-
-      <p>
-        Le joueur recherché recevra directement la récompense.
-      </p>
-
 
       <select id="adminRewardType">
 
@@ -443,7 +423,6 @@
 
       </select>
 
-
       <input
         id="adminAmount"
         type="number"
@@ -451,81 +430,32 @@
         placeholder="Quantité"
       >
 
-
       <select
         id="adminClassSelect"
         class="hidden"
       >
 
-        <option value="wolf1">
-          🐺 Loup-Garou 1
-        </option>
+        <option value="wolf1">🐺 Loup-Garou 1</option>
+        <option value="wolf2">🐺 Loup-Garou 2</option>
+        <option value="wolf3">🐺 Loup-Garou 3</option>
+        <option value="wolf4">🐺 Loup-Garou certifié</option>
 
-        <option value="wolf2">
-          🐺 Loup-Garou 2
-        </option>
+        <option value="seer1">🔮 Voyante 1</option>
+        <option value="seer2">🔮 Voyante 2</option>
+        <option value="seer3">🔮 Voyante 3</option>
+        <option value="seer4">🔮 Voyante certifiée</option>
 
-        <option value="wolf3">
-          🐺 Loup-Garou 3
-        </option>
+        <option value="witch1">🧪 Sorcière 1</option>
+        <option value="witch2">🧪 Sorcière 2</option>
+        <option value="witch3">🧪 Sorcière 3</option>
+        <option value="witch4">🧪 Sorcière certifiée</option>
 
-        <option value="wolf4">
-          🐺 Loup-Garou certifié
-        </option>
-
-
-        <option value="seer1">
-          🔮 Voyante 1
-        </option>
-
-        <option value="seer2">
-          🔮 Voyante 2
-        </option>
-
-        <option value="seer3">
-          🔮 Voyante 3
-        </option>
-
-        <option value="seer4">
-          🔮 Voyante certifiée
-        </option>
-
-
-        <option value="witch1">
-          🧪 Sorcière 1
-        </option>
-
-        <option value="witch2">
-          🧪 Sorcière 2
-        </option>
-
-        <option value="witch3">
-          🧪 Sorcière 3
-        </option>
-
-        <option value="witch4">
-          🧪 Sorcière certifiée
-        </option>
-
-
-        <option value="hunter1">
-          🎯 Chasseur 1
-        </option>
-
-        <option value="hunter2">
-          🎯 Chasseur 2
-        </option>
-
-        <option value="hunter3">
-          🎯 Chasseur 3
-        </option>
-
-        <option value="hunter4">
-          🎯 Chasseur certifié
-        </option>
+        <option value="hunter1">🎯 Chasseur 1</option>
+        <option value="hunter2">🎯 Chasseur 2</option>
+        <option value="hunter3">🎯 Chasseur 3</option>
+        <option value="hunter4">🎯 Chasseur certifié</option>
 
       </select>
-
 
       <button id="adminGiveButton">
         🎁 Donner au joueur
@@ -536,9 +466,7 @@
     </section>
 
 
-    <!-- =========================
-         RETOUR
-    ========================== -->
+    <!-- RETOUR -->
 
     <button id="backButton" class="hidden">
       ← Retour au menu
@@ -555,9 +483,7 @@
 
     <div class="auth-card">
 
-      <h1>
-        🔑 Mot de passe oublié
-      </h1>
+      <h1>🔑 Mot de passe oublié</h1>
 
       <input
         id="forgotPseudo"
@@ -580,9 +506,7 @@
 
 
   <script src="/socket.io/socket.io.js"></script>
-
   <script src="script.js"></script>
 
 </body>
-
 </html>
