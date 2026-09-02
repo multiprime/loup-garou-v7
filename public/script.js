@@ -2,48 +2,68 @@
    LOUP-GAROU V7 - SCRIPT CLIENT
 ===================================== */
 
-"use strict";
-
-
-/* =====================================
-   RACCOURCI DOM
-===================================== */
-
 const $ = (id) => document.getElementById(id);
-
-
-/* =====================================
-   SOCKET.IO
-===================================== */
 
 const socket = io();
 
-
-/* =====================================
-   VARIABLES
-===================================== */
+const ADMIN_PSEUDO = "creator2026";
 
 let currentUser = null;
-
 let currentRoomCode = null;
-
 let isRoomHost = false;
-
 let selectedAdminPlayer = null;
 
-
-/* =====================================
-   CLASSES
-===================================== */
-
-let CLASSES = [];
+let classesCache = [];
+let questsCache = [];
 
 
 /* =====================================
-   QUÊTES
+   OUTILS
 ===================================== */
 
-let QUESTS = [];
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+async function getJson(response) {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
+}
+
+
+function showMessage(id, message) {
+  const element = $(id);
+
+  if (element) {
+    element.textContent = message;
+  }
+}
+
+
+function isAdmin() {
+  return Boolean(
+    currentUser &&
+    currentUser.pseudo &&
+    currentUser.pseudo.toLowerCase() ===
+      ADMIN_PSEUDO.toLowerCase()
+  );
+}
+
+
+function getClassById(classId) {
+  return classesCache.find(
+    (classe) => classe.id === classId
+  );
+}
 
 
 /* =====================================
@@ -61,191 +81,43 @@ const pages = [
 ];
 
 
-/* =====================================
-   UTILITAIRES
-===================================== */
-
-function escapeHTML(value) {
-
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-
-}
-
-
-async function getJSON(url, options = {}) {
-
-  const response = await fetch(url, options);
-
-  let data = {};
-
-  try {
-
-    data = await response.json();
-
-  } catch {
-
-    data = {};
-
-  }
-
-  return {
-    response,
-    data
-  };
-
-}
-
-
-function showMessage(id, message) {
-
-  const element = $(id);
-
-  if (element) {
-
-    element.textContent = message;
-
-  }
-
-}
-
-
 function hidePages() {
-
   pages.forEach((pageId) => {
-
     const page = $(pageId);
 
     if (page) {
-
       page.classList.add("hidden");
-
     }
-
   });
 
-  const backButton = $("backButton");
-
-  if (backButton) {
-
-    backButton.classList.add("hidden");
-
+  if ($("backButton")) {
+    $("backButton").classList.add("hidden");
   }
-
 }
 
 
 function openPage(pageId) {
-
   hidePages();
 
   const page = $(pageId);
 
   if (page) {
-
     page.classList.remove("hidden");
-
   }
 
-  const backButton = $("backButton");
-
-  if (backButton) {
-
-    backButton.classList.remove("hidden");
-
+  if ($("backButton")) {
+    $("backButton").classList.remove("hidden");
   }
-
 }
 
 
-const backButton = $("backButton");
-
-if (backButton) {
-
-  backButton.addEventListener("click", () => {
-
-    hidePages();
-
-  });
-
-}
-
-
-/* =====================================
-   CHARGER CLASSES
-===================================== */
-
-async function loadClasses() {
-
-  try {
-
-    const { response, data } =
-      await getJSON("/api/classes");
-
-    if (!response.ok) {
-
-      console.error(
-        data.message || "Impossible de charger les classes."
-      );
-
-      return;
-
+if ($("backButton")) {
+  $("backButton").addEventListener(
+    "click",
+    () => {
+      hidePages();
     }
-
-    CLASSES = Array.isArray(data.classes)
-      ? data.classes
-      : [];
-
-  } catch (error) {
-
-    console.error(
-      "Erreur chargement classes :",
-      error
-    );
-
-  }
-
-}
-
-
-/* =====================================
-   CHARGER QUÊTES
-===================================== */
-
-async function loadQuests() {
-
-  try {
-
-    const { response, data } =
-      await getJSON("/api/quests");
-
-    if (!response.ok) {
-
-      console.error(
-        data.message || "Impossible de charger les quêtes."
-      );
-
-      return;
-
-    }
-
-    QUESTS = Array.isArray(data.quests)
-      ? data.quests
-      : [];
-
-  } catch (error) {
-
-    console.error(
-      "Erreur chargement quêtes :",
-      error
-    );
-
-  }
-
+  );
 }
 
 
@@ -253,99 +125,103 @@ async function loadQuests() {
    NAVIGATION
 ===================================== */
 
-const playButton = $("playButton");
+if ($("playButton")) {
+  $("playButton").addEventListener(
+    "click",
+    () => {
+      openPage("gameLobby");
 
-if (playButton) {
+      currentRoomCode = null;
+      isRoomHost = false;
 
-  playButton.addEventListener("click", () => {
+      if ($("startGameButton")) {
+        $("startGameButton").classList.add("hidden");
+      }
 
-    openPage("gameLobby");
-
-    currentRoomCode = null;
-
-    isRoomHost = false;
-
-    loadRooms();
-
-  });
-
+      loadRooms();
+    }
+  );
 }
 
 
-const classesButton = $("classesButton");
+if ($("classesButton")) {
+  $("classesButton").addEventListener(
+    "click",
+    async () => {
+      openPage("classesPage");
 
-if (classesButton) {
-
-  classesButton.addEventListener("click", async () => {
-
-    openPage("classesPage");
-
-    await loadClasses();
-
-    renderClasses();
-
-  });
-
+      await loadClasses();
+    }
+  );
 }
 
 
-const questsButton = $("questsButton");
+if ($("questsButton")) {
+  $("questsButton").addEventListener(
+    "click",
+    async () => {
+      openPage("questsPage");
 
-if (questsButton) {
-
-  questsButton.addEventListener("click", async () => {
-
-    openPage("questsPage");
-
-    await loadQuests();
-
-    renderQuests();
-
-  });
-
+      await loadQuests();
+    }
+  );
 }
 
 
-const friendsButton = $("friendsButton");
-
-if (friendsButton) {
-
-  friendsButton.addEventListener("click", () => {
-
-    openPage("friendsPage");
-
-    loadFriends();
-
-  });
-
+if ($("friendsButton")) {
+  $("friendsButton").addEventListener(
+    "click",
+    () => {
+      openPage("friendsPage");
+      renderFriendsUnavailable();
+    }
+  );
 }
 
 
-const rankingButton = $("rankingButton");
-
-if (rankingButton) {
-
-  rankingButton.addEventListener("click", () => {
-
-    openPage("rankingPage");
-
-    loadRanking();
-
-  });
-
+if ($("rankingButton")) {
+  $("rankingButton").addEventListener(
+    "click",
+    () => {
+      openPage("rankingPage");
+      loadRanking();
+    }
+  );
 }
 
 
-const settingsButton = $("settingsButton");
+if ($("settingsButton")) {
+  $("settingsButton").addEventListener(
+    "click",
+    () => {
+      openPage("settingsPage");
+    }
+  );
+}
 
-if (settingsButton) {
 
-  settingsButton.addEventListener("click", () => {
+if ($("adminButton")) {
+  $("adminButton").addEventListener(
+    "click",
+    () => {
+      if (!isAdmin()) {
+        alert("❌ Accès refusé.");
+        return;
+      }
 
-    openPage("settingsPage");
+      openPage("adminPage");
+      selectedAdminPlayer = null;
 
-  });
+      showMessage(
+        "adminMessage",
+        ""
+      );
 
+      if ($("adminPlayerResult")) {
+        $("adminPlayerResult").innerHTML = "";
+      }
+    }
+  );
 }
 
 
@@ -354,104 +230,60 @@ if (settingsButton) {
 ===================================== */
 
 function showLogin() {
-
-  const loginForm = $("loginForm");
-
-  const registerForm = $("registerForm");
-
-  const loginTab = $("loginTab");
-
-  const registerTab = $("registerTab");
-
-  if (loginForm) {
-
-    loginForm.classList.remove("hidden");
-
+  if ($("loginForm")) {
+    $("loginForm").classList.remove("hidden");
   }
 
-  if (registerForm) {
-
-    registerForm.classList.add("hidden");
-
+  if ($("registerForm")) {
+    $("registerForm").classList.add("hidden");
   }
 
-  if (loginTab) {
-
-    loginTab.classList.add("active");
-
+  if ($("loginTab")) {
+    $("loginTab").classList.add("active");
   }
 
-  if (registerTab) {
-
-    registerTab.classList.remove("active");
-
+  if ($("registerTab")) {
+    $("registerTab").classList.remove("active");
   }
 
   showMessage("authMessage", "");
-
 }
 
 
 function showRegister() {
-
-  const loginForm = $("loginForm");
-
-  const registerForm = $("registerForm");
-
-  const loginTab = $("loginTab");
-
-  const registerTab = $("registerTab");
-
-  if (registerForm) {
-
-    registerForm.classList.remove("hidden");
-
+  if ($("registerForm")) {
+    $("registerForm").classList.remove("hidden");
   }
 
-  if (loginForm) {
-
-    loginForm.classList.add("hidden");
-
+  if ($("loginForm")) {
+    $("loginForm").classList.add("hidden");
   }
 
-  if (registerTab) {
-
-    registerTab.classList.add("active");
-
+  if ($("registerTab")) {
+    $("registerTab").classList.add("active");
   }
 
-  if (loginTab) {
-
-    loginTab.classList.remove("active");
-
+  if ($("loginTab")) {
+    $("loginTab").classList.remove("active");
   }
 
   showMessage("authMessage", "");
-
 }
 
 
-const loginTab = $("loginTab");
-
-if (loginTab) {
-
-  loginTab.addEventListener(
+if ($("loginTab")) {
+  $("loginTab").addEventListener(
     "click",
     showLogin
   );
-
 }
 
 
-const registerTab = $("registerTab");
-
-if (registerTab) {
-
-  registerTab.addEventListener(
+if ($("registerTab")) {
+  $("registerTab").addEventListener(
     "click",
     showRegister
   );
-
 }
 
 
@@ -459,14 +291,10 @@ if (registerTab) {
    INSCRIPTION
 ===================================== */
 
-const registerForm = $("registerForm");
-
-if (registerForm) {
-
-  registerForm.addEventListener(
+if ($("registerForm")) {
+  $("registerForm").addEventListener(
     "submit",
     async (event) => {
-
       event.preventDefault();
 
       const pseudo =
@@ -484,59 +312,57 @@ if (registerForm) {
       );
 
       try {
+        const response = await fetch(
+          "/api/register",
+          {
+            method: "POST",
 
-        const { response, data } =
-          await getJSON(
-            "/api/register",
-            {
-              method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
 
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
+            body: JSON.stringify({
+              pseudo,
+              email,
+              password
+            })
+          }
+        );
 
-              body: JSON.stringify({
-                pseudo,
-                email,
-                password
-              })
-            }
-          );
+        const data =
+          await getJson(response);
 
         if (!response.ok) {
-
           showMessage(
             "authMessage",
             "❌ " +
-            (data.message || "Erreur.")
+              (
+                data.message ||
+                "Erreur lors de la création."
+              )
           );
 
           return;
-
         }
 
         showMessage(
           "authMessage",
-          "✅ Compte créé !"
+          "✅ Compte créé avec succès !"
         );
 
         loginUser(data.user);
 
       } catch (error) {
-
         console.error(error);
 
         showMessage(
           "authMessage",
           "❌ Impossible de joindre le serveur."
         );
-
       }
-
     }
   );
-
 }
 
 
@@ -544,14 +370,10 @@ if (registerForm) {
    CONNEXION
 ===================================== */
 
-const loginForm = $("loginForm");
-
-if (loginForm) {
-
-  loginForm.addEventListener(
+if ($("loginForm")) {
+  $("loginForm").addEventListener(
     "submit",
     async (event) => {
-
       event.preventDefault();
 
       const pseudo =
@@ -566,56 +388,51 @@ if (loginForm) {
       );
 
       try {
+        const response = await fetch(
+          "/api/login",
+          {
+            method: "POST",
 
-        const { response, data } =
-          await getJSON(
-            "/api/login",
-            {
-              method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
 
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
+            body: JSON.stringify({
+              pseudo,
+              password
+            })
+          }
+        );
 
-              body: JSON.stringify({
-                pseudo,
-                password
-              })
-            }
-          );
+        const data =
+          await getJson(response);
 
         if (!response.ok) {
-
           showMessage(
             "authMessage",
             "❌ " +
-            (
-              data.message ||
-              "Connexion impossible."
-            )
+              (
+                data.message ||
+                "Connexion impossible."
+              )
           );
 
           return;
-
         }
 
         loginUser(data.user);
 
       } catch (error) {
-
         console.error(error);
 
         showMessage(
           "authMessage",
           "❌ Impossible de joindre le serveur."
         );
-
       }
-
     }
   );
-
 }
 
 
@@ -624,22 +441,9 @@ if (loginForm) {
 ===================================== */
 
 function loginUser(user) {
-
   if (!user) return;
 
   currentUser = user;
-
-  if (!Array.isArray(currentUser.classes)) {
-
-    currentUser.classes = [];
-
-  }
-
-  if (!currentUser.equippedClass) {
-
-    currentUser.equippedClass = null;
-
-  }
 
   saveCurrentUser();
 
@@ -650,119 +454,128 @@ function loginUser(user) {
     }
   );
 
-  const authScreen = $("authScreen");
-
-  const forgotScreen = $("forgotScreen");
-
-  const menuScreen = $("menuScreen");
-
-  if (authScreen) {
-
-    authScreen.classList.add("hidden");
-
+  if ($("authScreen")) {
+    $("authScreen").classList.add("hidden");
   }
 
-  if (forgotScreen) {
-
-    forgotScreen.classList.add("hidden");
-
+  if ($("forgotScreen")) {
+    $("forgotScreen").classList.add("hidden");
   }
 
-  if (menuScreen) {
-
-    menuScreen.classList.remove("hidden");
-
+  if ($("menuScreen")) {
+    $("menuScreen").classList.remove("hidden");
   }
 
   hidePages();
 
   updateProfile();
-
   updateAdminButton();
 
+  refreshCurrentUser();
 }
 
 
 function saveCurrentUser() {
-
   if (!currentUser) return;
 
   localStorage.setItem(
     "lgv7_user",
     JSON.stringify(currentUser)
   );
+}
 
+
+async function refreshCurrentUser() {
+  if (!currentUser || !currentUser.pseudo) return;
+
+  try {
+    const response = await fetch(
+      "/api/users/" +
+        encodeURIComponent(
+          currentUser.pseudo
+        )
+    );
+
+    const data =
+      await getJson(response);
+
+    if (!response.ok || !data.user) {
+      return;
+    }
+
+    currentUser = data.user;
+
+    saveCurrentUser();
+
+    updateProfile();
+    updateAdminButton();
+
+  } catch (error) {
+    console.warn(
+      "Impossible d'actualiser le profil :",
+      error
+    );
+  }
 }
 
 
 function updateProfile() {
-
   if (!currentUser) return;
 
   if ($("playerName")) {
-
     $("playerName").textContent =
       currentUser.pseudo || "Joueur";
-
   }
 
   if ($("playerTitle")) {
-
     $("playerTitle").textContent =
       currentUser.title ||
       "Nouveau Villageois";
-
   }
 
   if ($("profileIcon")) {
-
     $("profileIcon").textContent =
       currentUser.icon || "🐺";
-
   }
 
   if ($("playerLevel")) {
-
     $("playerLevel").textContent =
       currentUser.level || 1;
-
   }
 
   if ($("playerXp")) {
-
     $("playerXp").textContent =
       currentUser.xp || 0;
-
   }
 
   if ($("playerCoins")) {
-
     $("playerCoins").textContent =
       currentUser.coins || 0;
-
   }
 
   if ($("playerTrophies")) {
-
     $("playerTrophies").textContent =
       currentUser.trophies || 0;
-
   }
 
   updateXpBar();
-
 }
 
 
 function updateXpBar() {
-
   if (!currentUser) return;
 
-  const xp =
-    Number(currentUser.xp || 0);
-
   const level =
-    Number(currentUser.level || 1);
+    Math.max(
+      1,
+      Number(currentUser.level) || 1
+    );
+
+  const xp =
+    Math.max(
+      0,
+      Number(currentUser.xp) || 0
+    );
 
   const xpForNextLevel =
     Math.max(
@@ -778,238 +591,198 @@ function updateXpBar() {
       )
     );
 
-  const xpProgress =
-    $("xpProgress");
-
-  if (xpProgress) {
-
-    xpProgress.style.width =
+  if ($("xpProgress")) {
+    $("xpProgress").style.width =
       percentage + "%";
-
   }
-
 }
 
 
 /* =====================================
-   BOUTON ADMIN
+   ADMIN BUTTON
 ===================================== */
 
 function updateAdminButton() {
-
   const adminButton =
     $("adminButton");
 
   if (!adminButton) return;
 
-  const isAdmin =
-    currentUser &&
-    currentUser.pseudo ===
-    "creator2026";
-
-  if (isAdmin) {
-
+  if (isAdmin()) {
     adminButton.classList.remove("hidden");
-
   } else {
-
     adminButton.classList.add("hidden");
-
   }
-
-}
-
-
-const adminButton = $("adminButton");
-
-if (adminButton) {
-
-  adminButton.addEventListener(
-    "click",
-    () => {
-
-      if (
-        !currentUser ||
-        currentUser.pseudo !==
-        "creator2026"
-      ) {
-
-        alert(
-          "❌ Accès refusé."
-        );
-
-        return;
-
-      }
-
-      selectedAdminPlayer = null;
-
-      showMessage(
-        "adminPlayerResult",
-        ""
-      );
-
-      showMessage(
-        "adminMessage",
-        ""
-      );
-
-      openPage("adminPage");
-
-    }
-  );
-
 }
 
 
 /* =====================================
-   CLASSES - AFFICHAGE
+   CLASSES
 ===================================== */
 
-function getClassIcon(classe) {
-
-  const name =
-    String(classe.name || "")
-      .toLowerCase();
-
-  if (name.includes("loup")) return "🐺";
-
-  if (name.includes("voyante")) return "🔮";
-
-  if (name.includes("sorcière")) return "🧪";
-
-  if (name.includes("chasseur")) return "🎯";
-
-  if (name.includes("premium")) return "💎";
-
-  if (name.includes("admin")) return "👑";
-
-  return "🐺";
-
-}
-
-
-function renderClasses() {
-
+async function loadClasses() {
   const container =
     $("classesList");
 
   if (!container) return;
 
-  if (!currentUser) {
+  container.textContent =
+    "Chargement...";
+
+  try {
+    const response =
+      await fetch("/api/classes");
+
+    const data =
+      await getJson(response);
+
+    if (!response.ok) {
+      container.textContent =
+        "❌ Impossible de charger les classes.";
+
+      return;
+    }
+
+    classesCache =
+      Array.isArray(data.classes)
+        ? data.classes
+        : [];
+
+    renderClasses();
+
+  } catch (error) {
+    console.error(error);
 
     container.textContent =
-      "Tu dois être connecté.";
+      "❌ Erreur de connexion.";
+  }
+}
+
+
+function getRoleEmoji(classId) {
+  if (classId.startsWith("wolf")) {
+    return "🐺";
+  }
+
+  if (classId.startsWith("seer")) {
+    return "🔮";
+  }
+
+  if (classId.startsWith("witch")) {
+    return "🧪";
+  }
+
+  if (classId.startsWith("hunter")) {
+    return "🎯";
+  }
+
+  if (classId.startsWith("premium")) {
+    return "💎";
+  }
+
+  if (classId.startsWith("admin")) {
+    return "👑";
+  }
+
+  return "🐺";
+}
+
+
+function renderClasses() {
+  const container =
+    $("classesList");
+
+  if (!container) return;
+
+  if (!classesCache.length) {
+    container.textContent =
+      "Aucune classe disponible.";
 
     return;
-
   }
 
   container.innerHTML = "";
 
-  if (!CLASSES.length) {
+  classesCache.forEach(
+    (classe) => {
+      const owned =
+        Array.isArray(
+          currentUser?.classes
+        ) &&
+        currentUser.classes.includes(
+          classe.id
+        );
 
-    container.textContent =
-      "Chargement des classes...";
+      const equipped =
+        currentUser?.equippedClass ===
+        classe.id;
 
-    return;
+      const card =
+        document.createElement("div");
 
-  }
-
-  CLASSES.forEach((classe) => {
-
-    const owned =
-      (
-        currentUser.classes || []
-      ).includes(
-        classe.id
-      );
-
-    const equipped =
-      currentUser.equippedClass ===
-      classe.id;
-
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "class-card" +
-      (
-        equipped
-          ? " equipped"
-          : ""
-      );
-
-    const icon =
-      getClassIcon(classe);
-
-    card.innerHTML = `
-      <div>
-        <h3>
-          ${icon}
-          ${escapeHTML(classe.name)}
-        </h3>
-
-        <p>
-          🪙 ${Number(classe.price || 0)}
-          • 🎲 ${Number(classe.chance || 0)}%
-        </p>
-      </div>
-
-      <button>
-        ${
+      card.className =
+        "class-card" +
+        (
           equipped
-            ? "✓ Équipée"
-            : owned
-              ? "Équiper"
-              : "Acheter"
+            ? " equipped"
+            : ""
+        );
+
+      const role =
+        getRoleEmoji(classe.id);
+
+      card.innerHTML = `
+        <div>
+          <h3>
+            ${role}
+            ${escapeHtml(classe.name)}
+          </h3>
+
+          <p>
+            🪙 ${Number(classe.price) || 0}
+            • 🎲 ${Number(classe.chance) || 0}% de chance
+          </p>
+        </div>
+
+        <button type="button">
+          ${
+            equipped
+              ? "✓ Équipée"
+              : owned
+                ? "Équiper"
+                : "Acheter"
+          }
+        </button>
+      `;
+
+      const button =
+        card.querySelector("button");
+
+      button.addEventListener(
+        "click",
+        () => {
+          if (equipped) return;
+
+          if (owned) {
+            equipClass(classe.id);
+          } else {
+            buyClass(classe.id);
+          }
         }
-      </button>
-    `;
+      );
 
-    const button =
-      card.querySelector("button");
-
-    if (equipped) {
-
-      button.disabled = true;
-
+      container.appendChild(card);
     }
-
-    button.addEventListener(
-      "click",
-      () => {
-
-        if (equipped) return;
-
-        if (owned) {
-
-          equipClass(classe.id);
-
-        } else {
-
-          buyClass(classe.id);
-
-        }
-
-      }
-    );
-
-    container.appendChild(card);
-
-  });
-
+  );
 }
 
 
 async function buyClass(classId) {
-
   if (!currentUser) return;
 
   try {
-
-    const { response, data } =
-      await getJSON(
+    const response =
+      await fetch(
         "/api/classes/buy",
         {
           method: "POST",
@@ -1022,23 +795,25 @@ async function buyClass(classId) {
           body: JSON.stringify({
             pseudo:
               currentUser.pseudo,
+
             classId
           })
         }
       );
 
-    if (!response.ok) {
+    const data =
+      await getJson(response);
 
+    if (!response.ok) {
       alert(
         "❌ " +
         (
           data.message ||
-          "Erreur."
+          "Erreur lors de l'achat."
         )
       );
 
       return;
-
     }
 
     currentUser =
@@ -1050,31 +825,24 @@ async function buyClass(classId) {
 
     renderClasses();
 
-    alert(
-      "🎉 Classe achetée !"
-    );
+    alert("🎉 Classe achetée !");
 
   } catch (error) {
-
     console.error(error);
 
     alert(
       "❌ Erreur de connexion."
     );
-
   }
-
 }
 
 
 async function equipClass(classId) {
-
   if (!currentUser) return;
 
   try {
-
-    const { response, data } =
-      await getJSON(
+    const response =
+      await fetch(
         "/api/classes/equip",
         {
           method: "POST",
@@ -1087,13 +855,16 @@ async function equipClass(classId) {
           body: JSON.stringify({
             pseudo:
               currentUser.pseudo,
+
             classId
           })
         }
       );
 
-    if (!response.ok) {
+    const data =
+      await getJson(response);
 
+    if (!response.ok) {
       alert(
         "❌ " +
         (
@@ -1103,7 +874,6 @@ async function equipClass(classId) {
       );
 
       return;
-
     }
 
     currentUser =
@@ -1115,20 +885,15 @@ async function equipClass(classId) {
 
     renderClasses();
 
-    alert(
-      "✅ Classe équipée !"
-    );
+    alert("✅ Classe équipée !");
 
   } catch (error) {
-
     console.error(error);
 
     alert(
       "❌ Erreur de connexion."
     );
-
   }
-
 }
 
 
@@ -1136,75 +901,105 @@ async function equipClass(classId) {
    QUÊTES
 ===================================== */
 
-function renderQuests() {
-
+async function loadQuests() {
   const container =
     $("questsList");
 
   if (!container) return;
 
-  container.innerHTML = "";
+  container.textContent =
+    "Chargement...";
 
-  if (!QUESTS.length) {
+  try {
+    const response =
+      await fetch("/api/quests");
 
+    const data =
+      await getJson(response);
+
+    if (!response.ok) {
+      container.textContent =
+        "❌ Impossible de charger les quêtes.";
+
+      return;
+    }
+
+    questsCache =
+      Array.isArray(data.quests)
+        ? data.quests
+        : [];
+
+    renderQuests();
+
+  } catch (error) {
+    console.error(error);
+
+    container.textContent =
+      "❌ Erreur de connexion.";
+  }
+}
+
+
+function renderQuests() {
+  const container =
+    $("questsList");
+
+  if (!container) return;
+
+  if (!questsCache.length) {
     container.textContent =
       "Aucune quête disponible.";
 
     return;
-
   }
 
-  QUESTS.forEach((quest) => {
+  container.innerHTML = "";
 
-    const card =
-      document.createElement("div");
+  questsCache.forEach(
+    (quest) => {
+      const card =
+        document.createElement("div");
 
-    card.className =
-      "quest-card";
+      card.className =
+        "quest-card";
 
-    card.innerHTML = `
-      <h3>
-        ${escapeHTML(quest.title)}
-      </h3>
+      card.innerHTML = `
+        <h3>
+          ${escapeHtml(quest.title)}
+        </h3>
 
-      <p>
-        ${escapeHTML(quest.description)}
-      </p>
+        <p>
+          ${escapeHtml(
+            quest.description
+          )}
+        </p>
 
-      <p>
-        ✨ ${Number(quest.xp || 0)} XP
-        • 🪙 ${Number(quest.coins || 0)}
-      </p>
-    `;
+        <p>
+          ✨ ${Number(quest.xp) || 0} XP
+          • 🪙 ${Number(quest.coins) || 0}
+        </p>
+      `;
 
-    container.appendChild(card);
-
-  });
-
+      container.appendChild(card);
+    }
+  );
 }
 
 
 /* =====================================
-   MULTIJOUEUR - CRÉER
+   SALONS - CRÉER
 ===================================== */
 
-const createRoomButton =
-  $("createRoomButton");
-
-if (createRoomButton) {
-
-  createRoomButton.addEventListener(
+if ($("createRoomButton")) {
+  $("createRoomButton").addEventListener(
     "click",
     () => {
-
       if (!currentUser) {
-
         alert(
           "Tu dois être connecté."
         );
 
         return;
-
       }
 
       socket.emit(
@@ -1214,17 +1009,14 @@ if (createRoomButton) {
             currentUser.pseudo
         }
       );
-
     }
   );
-
 }
 
 
 socket.on(
   "roomCreated",
   (room) => {
-
     currentRoomCode =
       room.code;
 
@@ -1232,18 +1024,13 @@ socket.on(
       true;
 
     if ($("joinRoomCode")) {
-
       $("joinRoomCode").value =
         room.code;
-
     }
 
     if ($("startGameButton")) {
-
       $("startGameButton")
-        .classList
-        .remove("hidden");
-
+        .classList.remove("hidden");
     }
 
     renderCurrentRoom(room);
@@ -1252,52 +1039,38 @@ socket.on(
       "🎮 Partie créée !\n\nCode : " +
       room.code
     );
-
   }
 );
 
 
 /* =====================================
-   MULTIJOUEUR - REJOINDRE
+   SALONS - REJOINDRE
 ===================================== */
 
-const joinRoomButton =
-  $("joinRoomButton");
-
-if (joinRoomButton) {
-
-  joinRoomButton.addEventListener(
+if ($("joinRoomButton")) {
+  $("joinRoomButton").addEventListener(
     "click",
     () => {
-
       if (!currentUser) {
-
         alert(
           "Tu dois être connecté."
         );
 
         return;
-
       }
 
-      const input =
-        $("joinRoomCode");
-
       const code =
-        String(
-          input?.value || ""
-        )
+        $("joinRoomCode")
+          .value
           .trim()
           .toUpperCase();
 
       if (!code) {
-
         alert(
           "Entre un code de partie."
         );
 
         return;
-
       }
 
       socket.emit(
@@ -1308,29 +1081,29 @@ if (joinRoomButton) {
             currentUser.pseudo
         }
       );
-
     }
   );
-
 }
 
 
 socket.on(
   "joinedRoom",
   (room) => {
-
     currentRoomCode =
       room.code;
 
     isRoomHost =
-      false;
+      room.host ===
+      currentUser?.pseudo;
 
     if ($("startGameButton")) {
-
-      $("startGameButton")
-        .classList
-        .add("hidden");
-
+      if (isRoomHost) {
+        $("startGameButton")
+          .classList.remove("hidden");
+      } else {
+        $("startGameButton")
+          .classList.add("hidden");
+      }
     }
 
     renderCurrentRoom(room);
@@ -1338,7 +1111,6 @@ socket.on(
     alert(
       "✅ Tu as rejoint la partie !"
     );
-
   }
 );
 
@@ -1346,16 +1118,26 @@ socket.on(
 socket.on(
   "roomUpdated",
   (room) => {
-
     if (
       currentRoomCode ===
       room.code
     ) {
+      isRoomHost =
+        room.host ===
+        currentUser?.pseudo;
+
+      if ($("startGameButton")) {
+        if (isRoomHost) {
+          $("startGameButton")
+            .classList.remove("hidden");
+        } else {
+          $("startGameButton")
+            .classList.add("hidden");
+        }
+      }
 
       renderCurrentRoom(room);
-
     }
-
   }
 );
 
@@ -1363,38 +1145,38 @@ socket.on(
 socket.on(
   "roomError",
   (message) => {
-
     alert(
       "❌ " + message
     );
-
   }
 );
 
 
 /* =====================================
-   MULTIJOUEUR - DÉMARRER
+   LANCER PARTIE
 ===================================== */
 
-const startGameButton =
-  $("startGameButton");
-
-if (startGameButton) {
-
-  startGameButton.addEventListener(
+if ($("startGameButton")) {
+  $("startGameButton").addEventListener(
     "click",
     () => {
-
-      if (!currentUser) return;
-
-      if (!currentRoomCode) {
-
+      if (
+        !currentRoomCode ||
+        !currentUser
+      ) {
         alert(
-          "Aucune partie sélectionnée."
+          "Aucune partie active."
         );
 
         return;
+      }
 
+      if (!isRoomHost) {
+        alert(
+          "Seul le créateur peut lancer la partie."
+        );
+
+        return;
       }
 
       socket.emit(
@@ -1402,30 +1184,22 @@ if (startGameButton) {
         {
           code:
             currentRoomCode,
+
           pseudo:
             currentUser.pseudo
         }
       );
-
     }
   );
-
 }
 
 
 socket.on(
   "gameStarted",
   (game) => {
-
-    const startButton =
-      $("startGameButton");
-
-    if (startButton) {
-
-      startButton.classList.add(
-        "hidden"
-      );
-
+    if ($("startGameButton")) {
+      $("startGameButton")
+        .classList.add("hidden");
     }
 
     const container =
@@ -1435,28 +1209,27 @@ socket.on(
 
     container.innerHTML = `
       <div class="room-card">
-
         <h2>
           🐺 La partie commence !
         </h2>
 
         <p>
-          Joueurs :
+          Les joueurs sont prêts :
         </p>
 
         <div id="gamePlayers"></div>
-
       </div>
     `;
 
     const players =
       $("gamePlayers");
 
-    if (players) {
-
+    if (
+      players &&
+      Array.isArray(game.players)
+    ) {
       game.players.forEach(
         (pseudo) => {
-
           const p =
             document.createElement("p");
 
@@ -1464,16 +1237,13 @@ socket.on(
             "👤 " + pseudo;
 
           players.appendChild(p);
-
         }
       );
-
     }
 
     alert(
       "🐺 La partie commence !"
     );
-
   }
 );
 
@@ -1483,43 +1253,54 @@ socket.on(
 ===================================== */
 
 function renderCurrentRoom(room) {
-
   const container =
     $("roomsList");
 
   if (!container) return;
 
-  const playersHTML =
-    room.players
-      .map(
-        (pseudo) =>
-          `<p>👤 ${escapeHTML(pseudo)}</p>`
-      )
-      .join("");
-
   container.innerHTML = `
     <div class="room-card">
-
       <h3>
-        🎮 Salon ${escapeHTML(room.code)}
+        🎮 Salon
+        ${escapeHtml(room.code)}
       </h3>
 
       <p>
         👑 Créateur :
-        ${escapeHTML(room.host)}
+        ${escapeHtml(room.host)}
       </p>
 
-      <h4>
-        Joueurs (${room.players.length})
-      </h4>
+      <p>
+        👥 ${room.players.length} joueur(s)
+      </p>
 
-      <div>
-        ${playersHTML}
-      </div>
+      <h4>Joueurs :</h4>
 
+      <div id="currentPlayers"></div>
     </div>
   `;
 
+  const playersContainer =
+    $("currentPlayers");
+
+  if (
+    playersContainer &&
+    Array.isArray(room.players)
+  ) {
+    room.players.forEach(
+      (pseudo) => {
+        const player =
+          document.createElement("p");
+
+        player.textContent =
+          "👤 " + pseudo;
+
+        playersContainer.appendChild(
+          player
+        );
+      }
+    );
+  }
 }
 
 
@@ -1528,16 +1309,13 @@ function renderCurrentRoom(room) {
 ===================================== */
 
 function loadRooms() {
-
   socket.emit("getRooms");
-
 }
 
 
 socket.on(
   "roomsList",
   (rooms) => {
-
     if (currentRoomCode) return;
 
     const container =
@@ -1547,21 +1325,18 @@ socket.on(
 
     if (
       !Array.isArray(rooms) ||
-      rooms.length === 0
+      !rooms.length
     ) {
-
       container.textContent =
         "Aucune partie disponible.";
 
       return;
-
     }
 
     container.innerHTML = "";
 
     rooms.forEach(
       (room) => {
-
         const card =
           document.createElement("div");
 
@@ -1571,19 +1346,19 @@ socket.on(
         card.innerHTML = `
           <strong>
             🎮 Code :
-            ${escapeHTML(room.code)}
+            ${escapeHtml(room.code)}
           </strong>
 
           <p>
-            👑 ${escapeHTML(room.host)}
+            👑 Créateur :
+            ${escapeHtml(room.host)}
           </p>
 
           <p>
-            👥 ${room.players.length}
-            joueur(s)
+            👥 ${room.players.length} joueur(s)
           </p>
 
-          <button>
+          <button type="button">
             Rejoindre
           </button>
         `;
@@ -1594,8 +1369,13 @@ socket.on(
         button.addEventListener(
           "click",
           () => {
+            if (!currentUser) {
+              alert(
+                "Tu dois être connecté."
+              );
 
-            if (!currentUser) return;
+              return;
+            }
 
             socket.emit(
               "joinRoom",
@@ -1607,223 +1387,136 @@ socket.on(
                   currentUser.pseudo
               }
             );
-
           }
         );
 
         container.appendChild(card);
-
       }
     );
-
   }
 );
 
 
 /* =====================================
-   AMIS - RECHERCHE JOUEUR
+   AMIS
 ===================================== */
 
-const searchFriendButton =
-  $("searchFriendButton");
+function renderFriendsUnavailable() {
+  const container =
+    $("friendsList");
 
-if (searchFriendButton) {
+  if (container) {
+    container.textContent =
+      "La fonctionnalité Amis sera activée lorsque les routes serveur /api/friends seront ajoutées.";
+  }
+}
 
-  searchFriendButton.addEventListener(
+
+/* =====================================
+   RECHERCHE JOUEUR
+===================================== */
+
+if ($("searchFriendButton")) {
+  $("searchFriendButton").addEventListener(
     "click",
     async () => {
-
       const pseudo =
-        String(
-          $("friendSearch")?.value || ""
-        ).trim();
+        $("friendSearch")
+          .value
+          .trim();
 
       if (!pseudo) {
-
-        alert(
+        showMessage(
+          "friendResult",
           "Entre un pseudo."
         );
 
         return;
-
       }
 
-      const result =
-        $("friendResult");
-
-      if (!result) return;
-
-      result.textContent =
-        "🔎 Recherche...";
+      showMessage(
+        "friendResult",
+        "Recherche..."
+      );
 
       try {
-
-        const { response, data } =
-          await getJSON(
+        const response =
+          await fetch(
             "/api/users/" +
             encodeURIComponent(pseudo)
           );
 
-        if (!response.ok) {
+        const data =
+          await getJson(response);
 
-          result.textContent =
-            "❌ Joueur introuvable.";
+        if (!response.ok) {
+          showMessage(
+            "friendResult",
+            "❌ " +
+              (
+                data.message ||
+                "Joueur introuvable."
+              )
+          );
 
           return;
-
         }
 
         const user =
           data.user;
 
+        const equipped =
+          getClassById(
+            user.equippedClass
+          );
+
         const className =
-          CLASSES.find(
-            (classe) =>
-              classe.id ===
-              user.equippedClass
-          )?.name ||
-          "Aucune";
+          equipped
+            ? equipped.name
+            : (
+              user.equippedClass ||
+              "Aucune"
+            );
 
-        result.innerHTML = `
+        $("friendResult").innerHTML = `
           <div class="friend-card">
-
             <strong>
-              ${escapeHTML(user.icon || "🐺")}
-              ${escapeHTML(user.pseudo)}
+              ${escapeHtml(
+                user.icon || "🐺"
+              )}
+              ${escapeHtml(user.pseudo)}
             </strong>
 
             <p>
-              ${escapeHTML(
+              ${escapeHtml(
                 user.title ||
                 "Nouveau Villageois"
               )}
             </p>
 
             <p>
-              ⭐ Niveau ${Number(user.level || 1)}
-              • ✨ ${Number(user.xp || 0)} XP
-              • 🪙 ${Number(user.coins || 0)}
+              ⭐ Niveau ${user.level}
+              • ✨ ${user.xp} XP
+              • 🪙 ${user.coins}
             </p>
 
             <p>
               🐺 Classe :
-              ${escapeHTML(className)}
+              ${escapeHtml(className)}
             </p>
-
           </div>
         `;
 
       } catch (error) {
-
         console.error(error);
 
-        result.textContent =
-          "❌ Erreur de connexion.";
-
+        showMessage(
+          "friendResult",
+          "❌ Erreur de connexion."
+        );
       }
-
     }
   );
-
-}
-
-
-/* =====================================
-   AMIS - LISTE
-
-   Les routes seront ajoutées
-   dans le prochain serveur.js.
-===================================== */
-
-async function loadFriends() {
-
-  const container =
-    $("friendsList");
-
-  if (!container) return;
-
-  if (!currentUser) {
-
-    container.textContent =
-      "Tu dois être connecté.";
-
-    return;
-
-  }
-
-  try {
-
-    const { response, data } =
-      await getJSON(
-        "/api/friends/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    if (!response.ok) {
-
-      container.textContent =
-        "Le système d'amis sera activé avec le nouveau serveur.";
-
-      return;
-
-    }
-
-    if (
-      !Array.isArray(data.friends) ||
-      !data.friends.length
-    ) {
-
-      container.textContent =
-        "Tu n'as pas encore d'amis.";
-
-      return;
-
-    }
-
-    container.innerHTML = "";
-
-    data.friends.forEach(
-      (friend) => {
-
-        const card =
-          document.createElement("div");
-
-        card.className =
-          "friend-card";
-
-        card.innerHTML = `
-          <strong>
-            ${escapeHTML(friend.icon || "🐺")}
-            ${escapeHTML(friend.pseudo)}
-          </strong>
-
-          <p>
-            ${escapeHTML(
-              friend.title ||
-              "Nouveau Villageois"
-            )}
-          </p>
-
-          <p>
-            ⭐ Niveau ${Number(friend.level || 1)}
-            • 🏆 ${Number(friend.trophies || 0)}
-          </p>
-        `;
-
-        container.appendChild(card);
-
-      }
-    );
-
-  } catch {
-
-    container.textContent =
-      "Le système d'amis sera activé avec le nouveau serveur.";
-
-  }
-
 }
 
 
@@ -1832,50 +1525,44 @@ async function loadFriends() {
 ===================================== */
 
 async function loadRanking() {
-
   const container =
     $("rankingList");
 
   if (!container) return;
 
   container.textContent =
-    "⏳ Chargement...";
+    "Chargement...";
 
   try {
-
-    const { response, data } =
-      await getJSON(
+    const response =
+      await fetch(
         "/api/ranking"
       );
 
-    if (!response.ok) {
+    const data =
+      await getJson(response);
 
+    if (!response.ok) {
       container.textContent =
         "❌ Impossible de charger le classement.";
 
       return;
-
-    }
-
-    const users =
-      Array.isArray(data.users)
-        ? data.users
-        : [];
-
-    if (!users.length) {
-
-      container.textContent =
-        "Aucun joueur.";
-
-      return;
-
     }
 
     container.innerHTML = "";
 
-    users.forEach(
-      (user, index) => {
+    if (
+      !Array.isArray(data.users) ||
+      !data.users.length
+    ) {
+      container.textContent =
+        "Aucun joueur dans le classement.";
 
+      return;
+    }
+
+    data.users.forEach(
+      (user, index) => {
         const card =
           document.createElement("div");
 
@@ -1885,35 +1572,77 @@ async function loadRanking() {
         card.innerHTML = `
           <strong>
             #${index + 1}
-            ${escapeHTML(user.icon || "🐺")}
-            ${escapeHTML(user.pseudo)}
+            ${escapeHtml(
+              user.icon || "🐺"
+            )}
+            ${escapeHtml(user.pseudo)}
           </strong>
 
           <p>
-            🏆 ${Number(user.trophies || 0)}
+            🏆 ${user.trophies}
             trophée(s)
           </p>
 
           <p>
-            ⭐ Niveau ${Number(user.level || 1)}
-            • ✨ ${Number(user.xp || 0)} XP
+            ⭐ Niveau ${user.level}
+            • ✨ ${user.xp} XP
           </p>
         `;
 
         container.appendChild(card);
-
       }
     );
 
   } catch (error) {
-
     console.error(error);
 
     container.textContent =
       "❌ Impossible de charger.";
-
   }
+}
 
+
+/* =====================================
+   ADMIN - TYPE DE RÉCOMPENSE
+===================================== */
+
+function updateAdminRewardInputs() {
+  const type =
+    $("adminRewardType")?.value;
+
+  const amount =
+    $("adminAmount");
+
+  const classSelect =
+    $("adminClassSelect");
+
+  if (!amount || !classSelect) return;
+
+  if (type === "class") {
+    amount.classList.add("hidden");
+    classSelect.classList.remove("hidden");
+  } else {
+    amount.classList.remove("hidden");
+    classSelect.classList.add("hidden");
+
+    if (type === "level") {
+      amount.placeholder =
+        "Le serveur actuel ne gère pas directement les niveaux";
+    } else {
+      amount.placeholder =
+        "Quantité";
+    }
+  }
+}
+
+
+if ($("adminRewardType")) {
+  $("adminRewardType").addEventListener(
+    "change",
+    updateAdminRewardInputs
+  );
+
+  updateAdminRewardInputs();
 }
 
 
@@ -1921,57 +1650,40 @@ async function loadRanking() {
    ADMIN - RECHERCHE
 ===================================== */
 
-const adminSearchButton =
-  $("adminSearchButton");
-
-if (adminSearchButton) {
-
-  adminSearchButton.addEventListener(
+if ($("adminSearchButton")) {
+  $("adminSearchButton").addEventListener(
     "click",
     async () => {
-
-      if (
-        !currentUser ||
-        currentUser.pseudo !==
-        "creator2026"
-      ) {
-
+      if (!isAdmin()) {
         alert(
           "❌ Accès refusé."
         );
 
         return;
-
       }
 
       const targetPseudo =
-        String(
-          $("adminPlayerSearch")?.value || ""
-        ).trim();
-
-      const result =
-        $("adminPlayerResult");
+        $("adminPlayerSearch")
+          .value
+          .trim();
 
       if (!targetPseudo) {
-
         showMessage(
-          "adminPlayerResult",
-          "❌ Entre un pseudo."
+          "adminMessage",
+          "❌ Entre le pseudo d'un joueur."
         );
 
         return;
-
       }
 
       showMessage(
-        "adminPlayerResult",
-        "🔎 Recherche..."
+        "adminMessage",
+        "⏳ Recherche..."
       );
 
       try {
-
-        const { response, data } =
-          await getJSON(
+        const response =
+          await fetch(
             "/api/admin/users/" +
             encodeURIComponent(targetPseudo) +
             "?adminPseudo=" +
@@ -1980,22 +1692,27 @@ if (adminSearchButton) {
             )
           );
 
-        if (!response.ok) {
+        const data =
+          await getJson(response);
 
-          selectedAdminPlayer =
-            null;
+        if (!response.ok) {
+          selectedAdminPlayer = null;
+
+          if ($("adminPlayerResult")) {
+            $("adminPlayerResult").innerHTML =
+              "❌ " +
+              (
+                data.message ||
+                "Joueur introuvable."
+              );
+          }
 
           showMessage(
-            "adminPlayerResult",
-            "❌ " +
-            (
-              data.message ||
-              "Joueur introuvable."
-            )
+            "adminMessage",
+            ""
           );
 
           return;
-
         }
 
         const user =
@@ -2004,123 +1721,57 @@ if (adminSearchButton) {
         selectedAdminPlayer =
           user.pseudo;
 
-        result.innerHTML = `
-          <div class="friend-card">
+        if ($("adminPlayerResult")) {
+          $("adminPlayerResult").innerHTML = `
+            <div class="friend-card">
+              <h3>
+                ${escapeHtml(
+                  user.icon || "🐺"
+                )}
+                ${escapeHtml(user.pseudo)}
+              </h3>
 
-            <h3>
-              ${escapeHTML(user.icon || "🐺")}
-              ${escapeHTML(user.pseudo)}
-            </h3>
+              <p>
+                ⭐ Niveau :
+                ${user.level}
+              </p>
 
-            <p>
-              ⭐ Niveau :
-              ${Number(user.level || 1)}
-            </p>
+              <p>
+                ✨ XP :
+                ${user.xp}
+              </p>
 
-            <p>
-              ✨ XP :
-              ${Number(user.xp || 0)}
-            </p>
+              <p>
+                🪙 Pièces :
+                ${user.coins}
+              </p>
 
-            <p>
-              🪙 Pièces :
-              ${Number(user.coins || 0)}
-            </p>
-
-            <p>
-              🏆 Trophées :
-              ${Number(user.trophies || 0)}
-            </p>
-
-          </div>
-        `;
+              <p>
+                🏆 Trophées :
+                ${user.trophies}
+              </p>
+            </div>
+          `;
+        }
 
         showMessage(
           "adminMessage",
           "✅ Joueur sélectionné : " +
-          user.pseudo
+            user.pseudo
         );
 
       } catch (error) {
-
         console.error(error);
 
+        selectedAdminPlayer = null;
+
         showMessage(
-          "adminPlayerResult",
+          "adminMessage",
           "❌ Erreur de connexion."
         );
-
       }
-
     }
   );
-
-}
-
-
-/* =====================================
-   ADMIN - TYPE RÉCOMPENSE
-===================================== */
-
-const adminRewardType =
-  $("adminRewardType");
-
-if (adminRewardType) {
-
-  adminRewardType.addEventListener(
-    "change",
-    () => {
-
-      const classSelect =
-        $("adminClassSelect");
-
-      const amount =
-        $("adminAmount");
-
-      if (
-        adminRewardType.value ===
-        "class"
-      ) {
-
-        if (classSelect) {
-
-          classSelect.classList.remove(
-            "hidden"
-          );
-
-        }
-
-        if (amount) {
-
-          amount.classList.add(
-            "hidden"
-          );
-
-        }
-
-      } else {
-
-        if (classSelect) {
-
-          classSelect.classList.add(
-            "hidden"
-          );
-
-        }
-
-        if (amount) {
-
-          amount.classList.remove(
-            "hidden"
-          );
-
-        }
-
-      }
-
-    }
-  );
-
 }
 
 
@@ -2128,38 +1779,31 @@ if (adminRewardType) {
    ADMIN - DONNER RÉCOMPENSE
 ===================================== */
 
-const adminGiveButton =
-  $("adminGiveButton");
-
-if (adminGiveButton) {
-
-  adminGiveButton.addEventListener(
+if ($("adminGiveButton")) {
+  $("adminGiveButton").addEventListener(
     "click",
     async () => {
-
-      if (
-        !currentUser ||
-        currentUser.pseudo !==
-        "creator2026"
-      ) {
-
+      if (!isAdmin()) {
         alert(
           "❌ Accès refusé."
         );
 
         return;
-
       }
 
-      if (!selectedAdminPlayer) {
+      const targetPseudo =
+        selectedAdminPlayer ||
+        $("adminPlayerSearch")
+          .value
+          .trim();
 
+      if (!targetPseudo) {
         showMessage(
           "adminMessage",
           "❌ Recherche d'abord un joueur."
         );
 
         return;
-
       }
 
       const type =
@@ -2169,87 +1813,61 @@ if (adminGiveButton) {
         Math.max(
           0,
           Number(
-            $("adminAmount")?.value || 0
-          )
+            $("adminAmount").value
+          ) || 0
         );
 
       const classId =
-        String(
-          $("adminClassSelect")?.value || ""
-        );
+        $("adminClassSelect").value;
 
-      const reward = {
-
-        adminPseudo:
-          currentUser.pseudo,
-
-        targetPseudo:
-          selectedAdminPlayer,
-
-        coins: 0,
-
-        xp: 0,
-
-        trophies: 0,
-
-        classId: ""
-
-      };
-
+      let coins = 0;
+      let xp = 0;
+      let trophies = 0;
+      let rewardClassId = "";
 
       if (type === "coins") {
-
-        reward.coins =
-          amount;
-
+        coins = amount;
       }
 
       if (type === "xp") {
-
-        reward.xp =
-          amount;
-
+        xp = amount;
       }
 
       if (type === "level") {
-
-        reward.xp =
-          amount * 500;
-
-      }
-
-      if (type === "class") {
-
-        reward.classId =
-          classId;
-
-      }
-
-
-      if (
-        type !== "class" &&
-        amount <= 0
-      ) {
-
         showMessage(
           "adminMessage",
-          "❌ Entre une quantité valide."
+          "⚠️ Le serveur actuel ne possède pas de récompense directe pour augmenter un niveau. Nous corrigerons cela dans serveur.js."
         );
 
         return;
-
       }
 
+      if (type === "class") {
+        rewardClassId = classId;
+      }
 
-      try {
-
+      if (
+        coins <= 0 &&
+        xp <= 0 &&
+        trophies <= 0 &&
+        !rewardClassId
+      ) {
         showMessage(
           "adminMessage",
-          "⏳ Envoi..."
+          "❌ Choisis une récompense valide."
         );
 
-        const { response, data } =
-          await getJSON(
+        return;
+      }
+
+      showMessage(
+        "adminMessage",
+        "⏳ Envoi de la récompense..."
+      );
+
+      try {
+        const response =
+          await fetch(
             "/api/admin/reward",
             {
               method: "POST",
@@ -2259,39 +1877,104 @@ if (adminGiveButton) {
                   "application/json"
               },
 
-              body: JSON.stringify(
-                reward
-              )
+              body: JSON.stringify({
+                adminPseudo:
+                  currentUser.pseudo,
+
+                targetPseudo,
+
+                coins,
+
+                xp,
+
+                trophies,
+
+                classId:
+                  rewardClassId
+              })
             }
           );
 
+        const data =
+          await getJson(response);
+
         showMessage(
           "adminMessage",
-          (
-            response.ok
-              ? "✅ "
-              : "❌ "
-          ) +
-          (
-            data.message ||
-            "Erreur."
-          )
+          response.ok
+            ? "✅ " + data.message
+            : "❌ " +
+              (
+                data.message ||
+                "Erreur."
+              )
         );
 
       } catch (error) {
-
         console.error(error);
 
         showMessage(
           "adminMessage",
           "❌ Erreur de connexion."
         );
-
       }
-
     }
   );
+}
 
+
+/* =====================================
+   NOTIFICATIONS
+===================================== */
+
+async function loadNotifications() {
+  if (!currentUser) return [];
+
+  try {
+    const response =
+      await fetch(
+        "/api/notifications/" +
+        encodeURIComponent(
+          currentUser.pseudo
+        )
+      );
+
+    const data =
+      await getJson(response);
+
+    if (!response.ok) {
+      return [];
+    }
+
+    return Array.isArray(
+      data.notifications
+    )
+      ? data.notifications
+      : [];
+
+  } catch {
+    return [];
+  }
+}
+
+
+async function checkNotifications() {
+  if (!currentUser) return;
+
+  const notifications =
+    await loadNotifications();
+
+  const pending =
+    notifications.filter(
+      (notification) =>
+        !notification.claimed
+    );
+
+  if (!pending.length) return;
+
+  console.log(
+    "Récompenses disponibles :",
+    pending.length
+  );
 }
 
 
@@ -2299,61 +1982,46 @@ if (adminGiveButton) {
    PARAMÈTRES - DÉCONNEXION
 ===================================== */
 
-const logoutButton =
-  $("logoutButton");
-
-if (logoutButton) {
-
-  logoutButton.addEventListener(
+if ($("logoutButton")) {
+  $("logoutButton").addEventListener(
     "click",
     () => {
-
       localStorage.removeItem(
         "lgv7_user"
       );
 
-      currentUser =
-        null;
+      currentUser = null;
+      currentRoomCode = null;
+      isRoomHost = false;
+      selectedAdminPlayer = null;
 
-      currentRoomCode =
-        null;
+      if ($("startGameButton")) {
+        $("startGameButton")
+          .classList.add("hidden");
+      }
 
-      isRoomHost =
-        false;
+      if ($("menuScreen")) {
+        $("menuScreen")
+          .classList.add("hidden");
+      }
 
-      selectedAdminPlayer =
-        null;
+      if ($("forgotScreen")) {
+        $("forgotScreen")
+          .classList.add("hidden");
+      }
 
-      const startButton =
-        $("startGameButton");
-
-      if (startButton) {
-
-        startButton.classList.add(
-          "hidden"
-        );
-
+      if ($("authScreen")) {
+        $("authScreen")
+          .classList.remove("hidden");
       }
 
       hidePages();
 
-      $("menuScreen")
-        ?.classList
-        .add("hidden");
-
-      $("forgotScreen")
-        ?.classList
-        .add("hidden");
-
-      $("authScreen")
-        ?.classList
-        .remove("hidden");
-
       showLogin();
 
+      updateAdminButton();
     }
   );
-
 }
 
 
@@ -2361,15 +2029,10 @@ if (logoutButton) {
    PARAMÈTRES - EMAIL
 ===================================== */
 
-const changeEmailButton =
-  $("changeEmailButton");
-
-if (changeEmailButton) {
-
-  changeEmailButton.addEventListener(
+if ($("changeEmailButton")) {
+  $("changeEmailButton").addEventListener(
     "click",
     async () => {
-
       if (!currentUser) return;
 
       const email =
@@ -2378,20 +2041,9 @@ if (changeEmailButton) {
       const password =
         $("emailPassword").value;
 
-      if (!email || !password) {
-
-        alert(
-          "Remplis tous les champs."
-        );
-
-        return;
-
-      }
-
       try {
-
-        const { response, data } =
-          await getJSON(
+        const response =
+          await fetch(
             "/api/account/email",
             {
               method: "POST",
@@ -2412,89 +2064,68 @@ if (changeEmailButton) {
             }
           );
 
+        const data =
+          await getJson(response);
+
         alert(
+          data.message ||
           (
             response.ok
-              ? "✅ "
-              : "❌ "
-          ) +
-          (
-            data.message ||
-            "Erreur."
+              ? "Adresse modifiée."
+              : "Erreur."
           )
         );
 
         if (response.ok) {
+          $("newEmail").value = "";
+          $("emailPassword").value = "";
 
-          currentUser.email =
-            email;
-
-          saveCurrentUser();
-
-          $("newEmail").value =
-            "";
-
-          $("emailPassword").value =
-            "";
-
+          await refreshCurrentUser();
         }
 
-      } catch {
+      } catch (error) {
+        console.error(error);
 
         alert(
           "❌ Erreur de connexion."
         );
-
       }
-
     }
   );
-
 }
 
 
 /* =====================================
-   PARAMÈTRES - SUPPRESSION
+   PARAMÈTRES - SUPPRESSION COMPTE
 ===================================== */
 
-const deleteAccountButton =
-  $("deleteAccountButton");
-
-if (deleteAccountButton) {
-
-  deleteAccountButton.addEventListener(
+if ($("deleteAccountButton")) {
+  $("deleteAccountButton").addEventListener(
     "click",
     async () => {
-
       if (!currentUser) return;
 
       const password =
         $("deletePassword").value;
 
       if (!password) {
-
         alert(
           "Entre ton mot de passe."
         );
 
         return;
-
       }
 
-      if (
-        !confirm(
+      const confirmed =
+        confirm(
           "Supprimer définitivement ton compte ?"
-        )
-      ) {
+        );
 
-        return;
-
-      }
+      if (!confirmed) return;
 
       try {
-
-        const { response, data } =
-          await getJSON(
+        const response =
+          await fetch(
             "/api/account/delete",
             {
               method: "POST",
@@ -2513,8 +2144,19 @@ if (deleteAccountButton) {
             }
           );
 
-        if (!response.ok) {
+        const data =
+          await getJson(response);
 
+        if (response.ok) {
+          alert(
+            "Compte supprimé."
+          );
+
+          if ($("logoutButton")) {
+            $("logoutButton").click();
+          }
+
+        } else {
           alert(
             "❌ " +
             (
@@ -2522,28 +2164,17 @@ if (deleteAccountButton) {
               "Erreur."
             )
           );
-
-          return;
-
         }
 
-        alert(
-          "✅ Compte supprimé."
-        );
-
-        logoutButton?.click();
-
-      } catch {
+      } catch (error) {
+        console.error(error);
 
         alert(
           "❌ Erreur de connexion."
         );
-
       }
-
     }
   );
-
 }
 
 
@@ -2551,86 +2182,73 @@ if (deleteAccountButton) {
    MOT DE PASSE OUBLIÉ
 ===================================== */
 
-const forgotPasswordButton =
-  $("forgotPasswordButton");
-
-if (forgotPasswordButton) {
-
-  forgotPasswordButton.addEventListener(
+if ($("forgotPasswordButton")) {
+  $("forgotPasswordButton").addEventListener(
     "click",
     () => {
+      if ($("authScreen")) {
+        $("authScreen")
+          .classList.add("hidden");
+      }
 
-      $("authScreen")
-        ?.classList
-        .add("hidden");
-
-      $("forgotScreen")
-        ?.classList
-        .remove("hidden");
+      if ($("forgotScreen")) {
+        $("forgotScreen")
+          .classList.remove("hidden");
+      }
 
       showMessage(
         "forgotMessage",
         ""
       );
-
     }
   );
-
 }
 
 
-const backToLoginButton =
-  $("backToLoginButton");
-
-if (backToLoginButton) {
-
-  backToLoginButton.addEventListener(
+if ($("backToLoginButton")) {
+  $("backToLoginButton").addEventListener(
     "click",
     () => {
+      if ($("forgotScreen")) {
+        $("forgotScreen")
+          .classList.add("hidden");
+      }
 
-      $("forgotScreen")
-        ?.classList
-        .add("hidden");
+      if ($("authScreen")) {
+        $("authScreen")
+          .classList.remove("hidden");
+      }
 
-      $("authScreen")
-        ?.classList
-        .remove("hidden");
-
+      showMessage(
+        "forgotMessage",
+        ""
+      );
     }
   );
-
 }
 
 
-const sendResetButton =
-  $("sendResetButton");
-
-if (sendResetButton) {
-
-  sendResetButton.addEventListener(
+if ($("sendResetButton")) {
+  $("sendResetButton").addEventListener(
     "click",
     async () => {
-
       const pseudo =
-        String(
-          $("forgotPseudo")?.value || ""
-        ).trim();
+        $("forgotPseudo")
+          .value
+          .trim();
 
       if (!pseudo) {
-
         showMessage(
           "forgotMessage",
-          "❌ Entre ton pseudo."
+          "Entre ton pseudo."
         );
 
         return;
-
       }
 
       try {
-
-        const { data } =
-          await getJSON(
+        const response =
+          await fetch(
             "/api/password/forgot",
             {
               method: "POST",
@@ -2646,67 +2264,101 @@ if (sendResetButton) {
             }
           );
 
+        const data =
+          await getJson(response);
+
         showMessage(
           "forgotMessage",
           data.message ||
-          "Demande envoyée."
+          (
+            response.ok
+              ? "Demande envoyée."
+              : "Erreur."
+          )
         );
 
-      } catch {
+      } catch (error) {
+        console.error(error);
 
         showMessage(
           "forgotMessage",
           "❌ Erreur de connexion."
         );
-
       }
-
     }
   );
+}
 
 
 /* =====================================
-   RESTAURER SESSION
+   CONNEXION SOCKET
+===================================== */
+
+socket.on(
+  "connect",
+  () => {
+    if (
+      currentUser &&
+      currentUser.pseudo
+    ) {
+      socket.emit(
+        "userOnline",
+        {
+          pseudo:
+            currentUser.pseudo
+        }
+      );
+    }
+  }
+);
+
+
+/* =====================================
+   RESTAURATION SESSION
 ===================================== */
 
 window.addEventListener(
   "load",
   async () => {
-
-    await loadClasses();
-
-    await loadQuests();
-
     const saved =
       localStorage.getItem(
         "lgv7_user"
       );
 
-    if (!saved) return;
+    if (!saved) {
+      showLogin();
+      return;
+    }
 
     try {
-
       const user =
         JSON.parse(saved);
 
       if (
-        user &&
-        user.pseudo
+        !user ||
+        !user.pseudo
       ) {
-
-        loginUser(user);
-
+        throw new Error(
+          "Session invalide"
+        );
       }
 
-    } catch (error) {
+      loginUser(user);
 
+      await loadClasses();
+
+      checkNotifications();
+
+    } catch (error) {
       console.error(error);
 
       localStorage.removeItem(
         "lgv7_user"
       );
 
-    }
+      currentUser = null;
 
+      showLogin();
+    }
   }
 );
