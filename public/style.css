@@ -1,376 +1,1009 @@
+/* =====================================
+   LOUP-GAROU V7 - STYLE
+===================================== */
+
+/* =====================================
+   RESET
+===================================== */
+
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-:root {
-  font-family: Arial, Helvetica, sans-serif;
-  background: #101522;
-  color: white;
+html {
+  min-height: 100%;
 }
 
 body {
-  margin: 0;
   min-height: 100vh;
+
+  font-family: Arial, Helvetica, sans-serif;
+
   background:
-    radial-gradient(circle at top, #29365a, #101522 65%);
+    radial-gradient(
+      circle at top,
+      #29294a 0%,
+      #171725 45%,
+      #0d0d15 100%
+    );
+
+  color: #ffffff;
 }
 
-button,
-input {
-  font: inherit;
-}
 
-button {
-  border: none;
-  cursor: pointer;
-  border-radius: 12px;
-  padding: 14px;
-  font-weight: bold;
-  transition: transform 0.15s, opacity 0.15s;
-}
-
-button:hover {
-  transform: translateY(-2px);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-input {
-  width: 100%;
-  padding: 14px;
-  border-radius: 12px;
-  border: 1px solid #4b5877;
-  background: #151c2d;
-  color: white;
-  margin: 7px 0;
-}
-
-input:focus {
-  outline: none;
-  border-color: #8b5cf6;
-}
+/* =====================================
+   UTILITAIRES
+===================================== */
 
 .hidden {
   display: none !important;
 }
 
-/* =========================
-   CONNEXION
-========================= */
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+
+/* =====================================
+   APPLICATION
+===================================== */
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+
+/* =====================================
+   ÉCRAN AUTHENTIFICATION
+===================================== */
 
 #authScreen,
 #forgotScreen {
+  width: 100%;
   min-height: 100vh;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   padding: 20px;
 }
 
-.auth-card {
-  width: min(430px, 100%);
-  background: rgba(29, 37, 60, 0.95);
-  padding: 30px;
-  border-radius: 22px;
-  border: 1px solid #3d4a6c;
-  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.4);
-}
-
-.auth-card h1 {
-  text-align: center;
-  margin-top: 0;
-}
-
-.auth-card p {
-  text-align: center;
-  color: #b9c2d8;
-}
-
-.tabs {
-  display: flex;
-  gap: 8px;
-  margin: 25px 0 15px;
-}
-
-.tabs button {
-  flex: 1;
-  background: #26304a;
-  color: white;
-}
-
-.tabs button.active {
-  background: #7c3aed;
-}
-
-form button {
+.auth-container {
   width: 100%;
-  margin-top: 12px;
-  background: #7c3aed;
-  color: white;
-}
+  max-width: 450px;
 
-.link-button {
-  background: transparent;
-  color: #a78bfa;
-}
+  padding: 30px;
 
-/* =========================
-   MENU
-========================= */
+  background:
+    linear-gradient(
+      145deg,
+      rgba(45, 45, 70, 0.98),
+      rgba(25, 25, 40, 0.98)
+    );
 
-#menuScreen {
-  width: min(1200px, 100%);
-  margin: auto;
-  padding: 20px;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: center;
-
-  padding: 20px;
-
-  background: rgba(29, 37, 60, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   border-radius: 20px;
 
-  margin-bottom: 20px;
+  box-shadow:
+    0 20px 60px
+    rgba(0, 0, 0, 0.45);
 }
 
-header > div:first-child {
+.logo {
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.logo h1 {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.logo p {
+  color: #b8b8c8;
+}
+
+
+/* =====================================
+   ONGLETS
+===================================== */
+
+.auth-tabs {
   display: flex;
-  align-items: center;
+  gap: 10px;
+
+  margin-bottom: 25px;
+}
+
+.auth-tabs button {
+  flex: 1;
+
+  padding: 12px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #202033;
+  color: #cfcfe2;
+
+  font-weight: bold;
+
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+
+.auth-tabs button:hover {
+  transform: translateY(-2px);
+}
+
+.auth-tabs button.active {
+  background:
+    linear-gradient(
+      135deg,
+      #8e44ff,
+      #5d2bd6
+    );
+
+  color: white;
+}
+
+
+/* =====================================
+   FORMULAIRES
+===================================== */
+
+form {
+  display: flex;
+  flex-direction: column;
   gap: 15px;
 }
 
-header h2 {
-  margin: 0;
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  color: #d8d8e5;
+  font-size: 0.9rem;
 }
 
-header p {
-  margin: 5px 0 0;
-  color: #aeb8d0;
+input,
+select {
+  width: 100%;
+
+  padding: 13px 14px;
+
+  border: 1px solid #3d3d58;
+  border-radius: 10px;
+
+  outline: none;
+
+  background: #161622;
+  color: white;
+
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
-.profile-icon {
-  width: 65px;
-  height: 65px;
+input::placeholder {
+  color: #85859c;
+}
+
+input:focus,
+select:focus {
+  border-color: #8e44ff;
+
+  box-shadow:
+    0 0 0 3px
+    rgba(142, 68, 255, 0.2);
+}
+
+select option {
+  background: #161622;
+  color: white;
+}
+
+
+/* =====================================
+   BOUTONS
+===================================== */
+
+.primary-button,
+form button[type="submit"] {
+  width: 100%;
+
+  padding: 14px;
+
+  border: none;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #8e44ff,
+      #5d2bd6
+    );
+
+  color: white;
+
+  font-weight: bold;
+  font-size: 1rem;
+
+  box-shadow:
+    0 8px 25px
+    rgba(120, 50, 255, 0.25);
+
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.primary-button:hover,
+form button[type="submit"]:hover {
+  transform: translateY(-2px);
+
+  box-shadow:
+    0 12px 30px
+    rgba(120, 50, 255, 0.4);
+}
+
+.secondary-button {
+  width: 100%;
+
+  padding: 12px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #34344c;
+  color: white;
+
+  font-weight: bold;
+
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.secondary-button:hover {
+  background: #454561;
+  transform: translateY(-2px);
+}
+
+.danger-button {
+  width: 100%;
+
+  padding: 13px;
+
+  border: none;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #e74c3c,
+      #b83227
+    );
+
+  color: white;
+
+  font-weight: bold;
+
+  transition: transform 0.2s;
+}
+
+.danger-button:hover {
+  transform: translateY(-2px);
+}
+
+
+/* =====================================
+   MESSAGES
+===================================== */
+
+#authMessage,
+#forgotMessage,
+#adminMessage {
+  min-height: 20px;
+
+  text-align: center;
+
+  color: #d9d9e8;
+
+  margin-top: 5px;
+}
+
+
+/* =====================================
+   MENU PRINCIPAL
+===================================== */
+
+#menuScreen {
+  width: 100%;
+  min-height: 100vh;
+
+  padding: 25px;
+}
+
+
+/* =====================================
+   PROFIL
+===================================== */
+
+.profile-card {
+  width: 100%;
+  max-width: 1000px;
+
+  margin: 0 auto 25px;
+
+  padding: 20px;
 
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 20px;
 
-  font-size: 35px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(55, 55, 85, 0.95),
+      rgba(30, 30, 50, 0.95)
+    );
 
-  background: #272f49;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 18px;
+
+  box-shadow:
+    0 15px 40px
+    rgba(0, 0, 0, 0.25);
+}
+
+#profileIcon {
+  width: 70px;
+  height: 70px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  font-size: 2.5rem;
 
   border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      #8e44ff,
+      #4420a0
+    );
 }
+
+.profile-info {
+  flex: 1;
+}
+
+#playerName {
+  font-size: 1.4rem;
+}
+
+#playerTitle {
+  margin-top: 4px;
+  color: #c4c4d4;
+}
+
+
+/* =====================================
+   STATISTIQUES
+===================================== */
 
 .player-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
+
+  margin-top: 14px;
 }
 
-.player-stats span {
-  background: #202942;
-  padding: 10px;
+.stat {
+  padding: 8px 12px;
+
+  background: rgba(0, 0, 0, 0.2);
+
   border-radius: 10px;
+
+  color: #e6e6f0;
 }
 
-/* =========================
-   XP
-========================= */
 
-.xp-section {
-  background: rgba(29, 37, 60, 0.9);
-  padding: 20px;
-  border-radius: 20px;
-  margin-bottom: 20px;
-}
+/* =====================================
+   BARRE XP
+===================================== */
 
 .xp-bar {
   width: 100%;
-  height: 20px;
+  height: 10px;
 
-  background: #111827;
-
-  border-radius: 20px;
+  margin-top: 12px;
 
   overflow: hidden;
-}
-
-.xp-progress {
-  height: 100%;
-  width: 0%;
-
-  background: linear-gradient(
-    90deg,
-    #7c3aed,
-    #38bdf8
-  );
 
   border-radius: 20px;
 
-  transition: width 0.4s;
+  background: #151521;
 }
 
-/* =========================
-   BOUTONS MENU
-========================= */
+#xpProgress {
+  width: 0%;
+  height: 100%;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      90deg,
+      #8e44ff,
+      #d65cff
+    );
+
+  transition: width 0.4s ease;
+}
+
+
+/* =====================================
+   MENU BOUTONS
+===================================== */
 
 .menu-buttons {
+  width: 100%;
+  max-width: 1000px;
+
+  margin: 0 auto;
+
   display: grid;
 
   grid-template-columns:
-    repeat(3, 1fr);
+    repeat(
+      auto-fit,
+      minmax(180px, 1fr)
+    );
 
   gap: 15px;
 }
 
-.menu-buttons button {
+.menu-button {
   min-height: 110px;
+
+  padding: 20px;
+
+  border: none;
+  border-radius: 16px;
 
   background:
     linear-gradient(
-      135deg,
-      #273451,
-      #1b2338
+      145deg,
+      #32324d,
+      #242438
     );
 
   color: white;
 
-  font-size: 18px;
+  font-size: 1rem;
+  font-weight: bold;
 
-  border: 1px solid #3d4a6c;
+  box-shadow:
+    0 10px 25px
+    rgba(0, 0, 0, 0.2);
+
+  transition:
+    transform 0.2s,
+    background 0.2s,
+    box-shadow 0.2s;
 }
 
-.menu-buttons button:hover {
+.menu-button:hover {
+  transform: translateY(-5px);
+
   background:
     linear-gradient(
-      135deg,
-      #7c3aed,
-      #4f46e5
+      145deg,
+      #414165,
+      #2d2d45
     );
+
+  box-shadow:
+    0 15px 35px
+    rgba(0, 0, 0, 0.3);
 }
 
-/* =========================
+
+/* =====================================
+   BOUTON RETOUR
+===================================== */
+
+#backButton {
+  margin-bottom: 20px;
+
+  padding: 10px 16px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #34344c;
+  color: white;
+
+  font-weight: bold;
+}
+
+
+/* =====================================
    PAGES
-========================= */
+===================================== */
 
 .page {
-  margin-top: 25px;
+  width: 100%;
+  max-width: 1000px;
+
+  margin: 0 auto 30px;
 
   padding: 25px;
 
-  background: rgba(29, 37, 60, 0.95);
+  background:
+    rgba(30, 30, 48, 0.85);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
 
   border-radius: 20px;
 
-  border: 1px solid #3d4a6c;
-}
-
-.page button {
-  margin: 6px 0;
-  background: #7c3aed;
-  color: white;
+  box-shadow:
+    0 15px 45px
+    rgba(0, 0, 0, 0.25);
 }
 
 .page h2 {
-  margin-top: 0;
+  margin-bottom: 20px;
+
+  font-size: 1.5rem;
 }
 
-#backButton {
-  margin-top: 20px;
-  width: 100%;
 
-  background: #475569;
-  color: white;
-}
+/* =====================================
+   SALONS
+===================================== */
 
-/* =========================
-   LISTES
-========================= */
-
-.class-card,
-.quest-card,
-.friend-card,
-.ranking-card,
-.room-card {
-  padding: 15px;
-  margin: 10px 0;
-
-  background: #202942;
-
-  border-radius: 14px;
-
-  border: 1px solid #3b4866;
-}
-
-.class-card {
+.room-actions {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  margin-bottom: 20px;
+}
+
+.room-actions input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.room-actions button,
+#startGameButton {
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #8e44ff,
+      #5d2bd6
+    );
+
+  color: white;
+
+  font-weight: bold;
+}
+
+#roomsList {
+  display: grid;
   gap: 15px;
 }
 
-.class-card h3,
-.quest-card h3 {
-  margin: 0 0 7px;
+.room-card {
+  padding: 20px;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #32324c,
+      #26263a
+    );
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.06);
 }
 
-.class-card p,
-.quest-card p {
-  margin: 5px 0;
-  color: #bac4dc;
+.room-card h2,
+.room-card h3,
+.room-card h4 {
+  margin-bottom: 12px;
 }
 
-.equipped {
-  border: 2px solid #a78bfa;
+.room-card p {
+  margin-top: 8px;
+
+  color: #d3d3df;
 }
 
-/* =========================
-   DANGER
-========================= */
+.room-card button {
+  margin-top: 15px;
 
-.danger {
-  background: #dc2626 !important;
-}
+  padding: 10px 16px;
 
-hr {
   border: none;
-  border-top: 1px solid #46516b;
-  margin: 25px 0;
+  border-radius: 9px;
+
+  background: #8e44ff;
+  color: white;
+
+  font-weight: bold;
 }
 
-/* =========================
-   MOBILE / CHROMEBOOK
-========================= */
 
-@media (max-width: 800px) {
+/* =====================================
+   CLASSES
+===================================== */
+
+#classesList {
+  display: grid;
+  gap: 15px;
+}
+
+.class-card {
+  padding: 18px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #32324d,
+      #242438
+    );
+
+  border: 2px solid transparent;
+
+  border-radius: 16px;
+
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+
+.class-card:hover {
+  transform: translateY(-3px);
+}
+
+.class-card.equipped {
+  border-color: #8e44ff;
+
+  box-shadow:
+    0 0 20px
+    rgba(142, 68, 255, 0.25);
+}
+
+.class-card h3 {
+  margin-bottom: 8px;
+}
+
+.class-card p {
+  color: #c9c9d8;
+}
+
+.class-card button {
+  flex-shrink: 0;
+
+  padding: 11px 16px;
+
+  border: none;
+  border-radius: 9px;
+
+  background: #8e44ff;
+  color: white;
+
+  font-weight: bold;
+}
+
+
+/* =====================================
+   QUÊTES
+===================================== */
+
+#questsList {
+  display: grid;
+  gap: 15px;
+}
+
+.quest-card {
+  padding: 20px;
+
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #32324d,
+      #242438
+    );
+
+  border-left:
+    4px solid #8e44ff;
+}
+
+.quest-card h3 {
+  margin-bottom: 10px;
+}
+
+.quest-card p {
+  margin-top: 8px;
+  color: #d2d2df;
+}
+
+
+/* =====================================
+   AMIS
+===================================== */
+
+.friend-search {
+  display: flex;
+  gap: 10px;
+
+  margin-bottom: 20px;
+}
+
+.friend-search input {
+  flex: 1;
+}
+
+.friend-search button {
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 10px;
+
+  background: #8e44ff;
+  color: white;
+
+  font-weight: bold;
+}
+
+#friendResult,
+#friendsList {
+  display: grid;
+  gap: 15px;
+}
+
+.friend-card {
+  padding: 18px;
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #32324d,
+      #242438
+    );
+}
+
+.friend-card h3,
+.friend-card strong {
+  font-size: 1.15rem;
+}
+
+.friend-card p {
+  margin-top: 8px;
+
+  color: #d0d0de;
+}
+
+
+/* =====================================
+   CLASSEMENT
+===================================== */
+
+#rankingList {
+  display: grid;
+  gap: 12px;
+}
+
+.ranking-card {
+  padding: 18px;
+
+  border-radius: 14px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #353550,
+      #25253a
+    );
+
+  border-left:
+    4px solid #e2b13c;
+}
+
+.ranking-card strong {
+  font-size: 1.1rem;
+}
+
+.ranking-card p {
+  margin-top: 8px;
+
+  color: #d2d2de;
+}
+
+
+/* =====================================
+   ADMIN
+===================================== */
+
+.admin-section {
+  margin-bottom: 25px;
+
+  padding: 20px;
+
+  background:
+    rgba(0, 0, 0, 0.18);
+
+  border-radius: 15px;
+}
+
+.admin-section h3 {
+  margin-bottom: 15px;
+}
+
+.admin-section input,
+.admin-section select {
+  margin-bottom: 10px;
+}
+
+#adminSearchButton,
+#adminGiveButton {
+  padding: 12px 18px;
+
+  border: none;
+  border-radius: 10px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #d49b1f,
+      #a36c00
+    );
+
+  color: white;
+
+  font-weight: bold;
+}
+
+#adminPlayerResult {
+  margin-top: 15px;
+}
+
+
+/* =====================================
+   PARAMÈTRES
+===================================== */
+
+.settings-section {
+  margin-bottom: 25px;
+
+  padding: 20px;
+
+  border-radius: 16px;
+
+  background:
+    rgba(0, 0, 0, 0.15);
+}
+
+.settings-section h3 {
+  margin-bottom: 15px;
+}
+
+.settings-section label {
+  margin-bottom: 10px;
+}
+
+#logoutButton {
+  margin-top: 10px;
+}
+
+
+/* =====================================
+   LIENS
+===================================== */
+
+.text-button {
+  border: none;
+  background: transparent;
+
+  color: #a970ff;
+
+  text-decoration: underline;
+
+  padding: 5px;
+
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: #d1b0ff;
+}
+
+
+/* =====================================
+   SCROLLBAR
+===================================== */
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #12121d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #454562;
+
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #66668a;
+}
+
+
+/* =====================================
+   RESPONSIVE TABLETTE
+===================================== */
+
+@media (max-width: 700px) {
 
   #menuScreen {
-    padding: 12px;
+    padding: 15px;
   }
 
-  header {
-    flex-direction: column;
-    align-items: stretch;
+  .page {
+    padding: 18px;
   }
 
-  .menu-buttons {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .menu-buttons button {
-    min-height: 90px;
-    font-size: 16px;
+  .profile-card {
+    align-items: flex-start;
   }
 
   .class-card {
@@ -382,16 +1015,69 @@ hr {
     width: 100%;
   }
 
+  .room-actions {
+    flex-direction: column;
+  }
+
+  .room-actions input,
+  .room-actions button {
+    width: 100%;
+  }
+
+  .friend-search {
+    flex-direction: column;
+  }
+
+  .friend-search button {
+    width: 100%;
+  }
+
 }
 
-@media (max-width: 450px) {
+
+/* =====================================
+   RESPONSIVE MOBILE
+===================================== */
+
+@media (max-width: 480px) {
+
+  .auth-container {
+    padding: 22px 18px;
+  }
+
+  .logo h1 {
+    font-size: 1.6rem;
+  }
+
+  .profile-card {
+    flex-direction: column;
+  }
+
+  #profileIcon {
+    width: 60px;
+    height: 60px;
+
+    font-size: 2rem;
+  }
+
+  .player-stats {
+    flex-direction: column;
+  }
+
+  .stat {
+    width: 100%;
+  }
 
   .menu-buttons {
     grid-template-columns: 1fr;
   }
 
-  .auth-card {
-    padding: 20px;
+  .menu-button {
+    min-height: 80px;
+  }
+
+  .page h2 {
+    font-size: 1.3rem;
   }
 
 }
