@@ -2,39 +2,48 @@
    LOUP-GAROU V7 - SCRIPT CLIENT
 ===================================== */
 
-const $ = (id) => document.getElementById(id);
-
-const socket = io();
-
-let currentUser = null;
-let currentRoomCode = null;
-let isRoomHost = false;
-
-let serverClasses = [];
-let serverQuests = [];
+"use strict";
 
 
 /* =====================================
-   API HELPER
+   RACCOURCI DOM
 ===================================== */
 
-async function api(url, options = {}) {
+const $ = (id) => document.getElementById(id);
 
-  const response = await fetch(url, options);
 
-  let data = {};
+/* =====================================
+   SOCKET.IO
+===================================== */
 
-  try {
-    data = await response.json();
-  } catch {
-    data = {};
-  }
+const socket = io();
 
-  return {
-    response,
-    data
-  };
-}
+
+/* =====================================
+   VARIABLES
+===================================== */
+
+let currentUser = null;
+
+let currentRoomCode = null;
+
+let isRoomHost = false;
+
+let selectedAdminPlayer = null;
+
+
+/* =====================================
+   CLASSES
+===================================== */
+
+let CLASSES = [];
+
+
+/* =====================================
+   QUÊTES
+===================================== */
+
+let QUESTS = [];
 
 
 /* =====================================
@@ -52,6 +61,59 @@ const pages = [
 ];
 
 
+/* =====================================
+   UTILITAIRES
+===================================== */
+
+function escapeHTML(value) {
+
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+
+}
+
+
+async function getJSON(url, options = {}) {
+
+  const response = await fetch(url, options);
+
+  let data = {};
+
+  try {
+
+    data = await response.json();
+
+  } catch {
+
+    data = {};
+
+  }
+
+  return {
+    response,
+    data
+  };
+
+}
+
+
+function showMessage(id, message) {
+
+  const element = $(id);
+
+  if (element) {
+
+    element.textContent = message;
+
+  }
+
+}
+
+
 function hidePages() {
 
   pages.forEach((pageId) => {
@@ -59,13 +121,19 @@ function hidePages() {
     const page = $(pageId);
 
     if (page) {
+
       page.classList.add("hidden");
+
     }
 
   });
 
-  if ($("backButton")) {
-    $("backButton").classList.add("hidden");
+  const backButton = $("backButton");
+
+  if (backButton) {
+
+    backButton.classList.add("hidden");
+
   }
 
 }
@@ -78,26 +146,105 @@ function openPage(pageId) {
   const page = $(pageId);
 
   if (page) {
+
     page.classList.remove("hidden");
+
   }
 
-  if ($("backButton")) {
-    $("backButton").classList.remove("hidden");
+  const backButton = $("backButton");
+
+  if (backButton) {
+
+    backButton.classList.remove("hidden");
+
   }
 
 }
 
 
-if ($("backButton")) {
+const backButton = $("backButton");
 
-  $("backButton").addEventListener(
-    "click",
-    () => {
+if (backButton) {
 
-      hidePages();
+  backButton.addEventListener("click", () => {
+
+    hidePages();
+
+  });
+
+}
+
+
+/* =====================================
+   CHARGER CLASSES
+===================================== */
+
+async function loadClasses() {
+
+  try {
+
+    const { response, data } =
+      await getJSON("/api/classes");
+
+    if (!response.ok) {
+
+      console.error(
+        data.message || "Impossible de charger les classes."
+      );
+
+      return;
 
     }
-  );
+
+    CLASSES = Array.isArray(data.classes)
+      ? data.classes
+      : [];
+
+  } catch (error) {
+
+    console.error(
+      "Erreur chargement classes :",
+      error
+    );
+
+  }
+
+}
+
+
+/* =====================================
+   CHARGER QUÊTES
+===================================== */
+
+async function loadQuests() {
+
+  try {
+
+    const { response, data } =
+      await getJSON("/api/quests");
+
+    if (!response.ok) {
+
+      console.error(
+        data.message || "Impossible de charger les quêtes."
+      );
+
+      return;
+
+    }
+
+    QUESTS = Array.isArray(data.quests)
+      ? data.quests
+      : [];
+
+  } catch (error) {
+
+    console.error(
+      "Erreur chargement quêtes :",
+      error
+    );
+
+  }
 
 }
 
@@ -106,82 +253,100 @@ if ($("backButton")) {
    NAVIGATION
 ===================================== */
 
-$("playButton").addEventListener(
-  "click",
-  () => {
+const playButton = $("playButton");
+
+if (playButton) {
+
+  playButton.addEventListener("click", () => {
 
     openPage("gameLobby");
 
+    currentRoomCode = null;
+
+    isRoomHost = false;
+
     loadRooms();
 
-  }
-);
+  });
+
+}
 
 
-$("classesButton").addEventListener(
-  "click",
-  async () => {
+const classesButton = $("classesButton");
+
+if (classesButton) {
+
+  classesButton.addEventListener("click", async () => {
 
     openPage("classesPage");
 
     await loadClasses();
 
-  }
-);
+    renderClasses();
+
+  });
+
+}
 
 
-$("questsButton").addEventListener(
-  "click",
-  async () => {
+const questsButton = $("questsButton");
+
+if (questsButton) {
+
+  questsButton.addEventListener("click", async () => {
 
     openPage("questsPage");
 
     await loadQuests();
 
-  }
-);
+    renderQuests();
+
+  });
+
+}
 
 
-$("friendsButton").addEventListener(
-  "click",
-  () => {
+const friendsButton = $("friendsButton");
+
+if (friendsButton) {
+
+  friendsButton.addEventListener("click", () => {
 
     openPage("friendsPage");
 
-    const container = $("friendsList");
+    loadFriends();
 
-    container.innerHTML = `
-      <p>
-        👥 Le système d'amis sera activé
-        lorsque les routes API amis seront ajoutées
-        au serveur.
-      </p>
-    `;
+  });
 
-  }
-);
+}
 
 
-$("rankingButton").addEventListener(
-  "click",
-  async () => {
+const rankingButton = $("rankingButton");
+
+if (rankingButton) {
+
+  rankingButton.addEventListener("click", () => {
 
     openPage("rankingPage");
 
-    await loadRanking();
+    loadRanking();
 
-  }
-);
+  });
+
+}
 
 
-$("settingsButton").addEventListener(
-  "click",
-  () => {
+const settingsButton = $("settingsButton");
+
+if (settingsButton) {
+
+  settingsButton.addEventListener("click", () => {
 
     openPage("settingsPage");
 
-  }
-);
+  });
+
+}
 
 
 /* =====================================
@@ -190,183 +355,268 @@ $("settingsButton").addEventListener(
 
 function showLogin() {
 
-  $("loginForm").classList.remove("hidden");
+  const loginForm = $("loginForm");
 
-  $("registerForm").classList.add("hidden");
+  const registerForm = $("registerForm");
 
-  $("loginTab").classList.add("active");
+  const loginTab = $("loginTab");
 
-  $("registerTab").classList.remove("active");
+  const registerTab = $("registerTab");
 
-  $("authMessage").textContent = "";
+  if (loginForm) {
+
+    loginForm.classList.remove("hidden");
+
+  }
+
+  if (registerForm) {
+
+    registerForm.classList.add("hidden");
+
+  }
+
+  if (loginTab) {
+
+    loginTab.classList.add("active");
+
+  }
+
+  if (registerTab) {
+
+    registerTab.classList.remove("active");
+
+  }
+
+  showMessage("authMessage", "");
 
 }
 
 
 function showRegister() {
 
-  $("registerForm").classList.remove("hidden");
+  const loginForm = $("loginForm");
 
-  $("loginForm").classList.add("hidden");
+  const registerForm = $("registerForm");
 
-  $("registerTab").classList.add("active");
+  const loginTab = $("loginTab");
 
-  $("loginTab").classList.remove("active");
+  const registerTab = $("registerTab");
 
-  $("authMessage").textContent = "";
+  if (registerForm) {
+
+    registerForm.classList.remove("hidden");
+
+  }
+
+  if (loginForm) {
+
+    loginForm.classList.add("hidden");
+
+  }
+
+  if (registerTab) {
+
+    registerTab.classList.add("active");
+
+  }
+
+  if (loginTab) {
+
+    loginTab.classList.remove("active");
+
+  }
+
+  showMessage("authMessage", "");
 
 }
 
 
-$("loginTab").addEventListener(
-  "click",
-  showLogin
-);
+const loginTab = $("loginTab");
+
+if (loginTab) {
+
+  loginTab.addEventListener(
+    "click",
+    showLogin
+  );
+
+}
 
 
-$("registerTab").addEventListener(
-  "click",
-  showRegister
-);
+const registerTab = $("registerTab");
+
+if (registerTab) {
+
+  registerTab.addEventListener(
+    "click",
+    showRegister
+  );
+
+}
 
 
 /* =====================================
    INSCRIPTION
 ===================================== */
 
-$("registerForm").addEventListener(
-  "submit",
-  async (event) => {
+const registerForm = $("registerForm");
 
-    event.preventDefault();
+if (registerForm) {
 
-    const pseudo =
-      $("registerPseudo").value.trim();
+  registerForm.addEventListener(
+    "submit",
+    async (event) => {
 
-    const email =
-      $("registerEmail").value.trim();
+      event.preventDefault();
 
-    const password =
-      $("registerPassword").value;
+      const pseudo =
+        $("registerPseudo").value.trim();
 
-    $("authMessage").textContent =
-      "⏳ Création du compte...";
+      const email =
+        $("registerEmail").value.trim();
 
-    try {
+      const password =
+        $("registerPassword").value;
 
-      const { response, data } =
-        await api(
-          "/api/register",
-          {
-            method: "POST",
+      showMessage(
+        "authMessage",
+        "⏳ Création du compte..."
+      );
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+      try {
 
-            body: JSON.stringify({
-              pseudo,
-              email,
-              password
-            })
-          }
-        );
+        const { response, data } =
+          await getJSON(
+            "/api/register",
+            {
+              method: "POST",
 
-      if (!response.ok) {
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
 
-        $("authMessage").textContent =
-          "❌ " +
-          (
-            data.message ||
-            "Erreur lors de la création."
+              body: JSON.stringify({
+                pseudo,
+                email,
+                password
+              })
+            }
           );
 
-        return;
+        if (!response.ok) {
+
+          showMessage(
+            "authMessage",
+            "❌ " +
+            (data.message || "Erreur.")
+          );
+
+          return;
+
+        }
+
+        showMessage(
+          "authMessage",
+          "✅ Compte créé !"
+        );
+
+        loginUser(data.user);
+
+      } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+          "authMessage",
+          "❌ Impossible de joindre le serveur."
+        );
+
       }
 
-      $("authMessage").textContent =
-        "✅ Compte créé avec succès !";
-
-      loginUser(data.user);
-
-    } catch (error) {
-
-      console.error(error);
-
-      $("authMessage").textContent =
-        "❌ Impossible de joindre le serveur.";
-
     }
+  );
 
-  }
-);
+}
 
 
 /* =====================================
    CONNEXION
 ===================================== */
 
-$("loginForm").addEventListener(
-  "submit",
-  async (event) => {
+const loginForm = $("loginForm");
 
-    event.preventDefault();
+if (loginForm) {
 
-    const pseudo =
-      $("loginPseudo").value.trim();
+  loginForm.addEventListener(
+    "submit",
+    async (event) => {
 
-    const password =
-      $("loginPassword").value;
+      event.preventDefault();
 
-    $("authMessage").textContent =
-      "⏳ Connexion...";
+      const pseudo =
+        $("loginPseudo").value.trim();
 
-    try {
+      const password =
+        $("loginPassword").value;
 
-      const { response, data } =
-        await api(
-          "/api/login",
-          {
-            method: "POST",
+      showMessage(
+        "authMessage",
+        "⏳ Connexion..."
+      );
 
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
+      try {
 
-            body: JSON.stringify({
-              pseudo,
-              password
-            })
-          }
-        );
+        const { response, data } =
+          await getJSON(
+            "/api/login",
+            {
+              method: "POST",
 
-      if (!response.ok) {
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
 
-        $("authMessage").textContent =
-          "❌ " +
-          (
-            data.message ||
-            "Connexion impossible."
+              body: JSON.stringify({
+                pseudo,
+                password
+              })
+            }
           );
 
-        return;
+        if (!response.ok) {
+
+          showMessage(
+            "authMessage",
+            "❌ " +
+            (
+              data.message ||
+              "Connexion impossible."
+            )
+          );
+
+          return;
+
+        }
+
+        loginUser(data.user);
+
+      } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+          "authMessage",
+          "❌ Impossible de joindre le serveur."
+        );
+
       }
 
-      loginUser(data.user);
-
-    } catch (error) {
-
-      console.error(error);
-
-      $("authMessage").textContent =
-        "❌ Impossible de joindre le serveur.";
-
     }
+  );
 
-  }
-);
+}
 
 
 /* =====================================
@@ -375,22 +625,54 @@ $("loginForm").addEventListener(
 
 function loginUser(user) {
 
+  if (!user) return;
+
   currentUser = user;
+
+  if (!Array.isArray(currentUser.classes)) {
+
+    currentUser.classes = [];
+
+  }
+
+  if (!currentUser.equippedClass) {
+
+    currentUser.equippedClass = null;
+
+  }
 
   saveCurrentUser();
 
   socket.emit(
     "userOnline",
     {
-      pseudo: user.pseudo
+      pseudo: currentUser.pseudo
     }
   );
 
-  $("authScreen").classList.add("hidden");
+  const authScreen = $("authScreen");
 
-  $("forgotScreen").classList.add("hidden");
+  const forgotScreen = $("forgotScreen");
 
-  $("menuScreen").classList.remove("hidden");
+  const menuScreen = $("menuScreen");
+
+  if (authScreen) {
+
+    authScreen.classList.add("hidden");
+
+  }
+
+  if (forgotScreen) {
+
+    forgotScreen.classList.add("hidden");
+
+  }
+
+  if (menuScreen) {
+
+    menuScreen.classList.remove("hidden");
+
+  }
 
   hidePages();
 
@@ -417,28 +699,55 @@ function updateProfile() {
 
   if (!currentUser) return;
 
-  $("playerName").textContent =
-    currentUser.pseudo;
+  if ($("playerName")) {
 
-  $("playerTitle").textContent =
-    currentUser.title ||
-    "Nouveau Villageois";
+    $("playerName").textContent =
+      currentUser.pseudo || "Joueur";
 
-  $("profileIcon").textContent =
-    currentUser.icon ||
-    "🐺";
+  }
 
-  $("playerLevel").textContent =
-    currentUser.level || 1;
+  if ($("playerTitle")) {
 
-  $("playerXp").textContent =
-    currentUser.xp || 0;
+    $("playerTitle").textContent =
+      currentUser.title ||
+      "Nouveau Villageois";
 
-  $("playerCoins").textContent =
-    currentUser.coins || 0;
+  }
 
-  $("playerTrophies").textContent =
-    currentUser.trophies || 0;
+  if ($("profileIcon")) {
+
+    $("profileIcon").textContent =
+      currentUser.icon || "🐺";
+
+  }
+
+  if ($("playerLevel")) {
+
+    $("playerLevel").textContent =
+      currentUser.level || 1;
+
+  }
+
+  if ($("playerXp")) {
+
+    $("playerXp").textContent =
+      currentUser.xp || 0;
+
+  }
+
+  if ($("playerCoins")) {
+
+    $("playerCoins").textContent =
+      currentUser.coins || 0;
+
+  }
+
+  if ($("playerTrophies")) {
+
+    $("playerTrophies").textContent =
+      currentUser.trophies || 0;
+
+  }
 
   updateXpBar();
 
@@ -469,14 +778,21 @@ function updateXpBar() {
       )
     );
 
-  $("xpProgress").style.width =
-    percentage + "%";
+  const xpProgress =
+    $("xpProgress");
+
+  if (xpProgress) {
+
+    xpProgress.style.width =
+      percentage + "%";
+
+  }
 
 }
 
 
 /* =====================================
-   ADMIN BUTTON
+   BOUTON ADMIN
 ===================================== */
 
 function updateAdminButton() {
@@ -486,10 +802,12 @@ function updateAdminButton() {
 
   if (!adminButton) return;
 
-  if (
+  const isAdmin =
     currentUser &&
-    currentUser.isAdmin === true
-  ) {
+    currentUser.pseudo ===
+    "creator2026";
+
+  if (isAdmin) {
 
     adminButton.classList.remove("hidden");
 
@@ -502,122 +820,71 @@ function updateAdminButton() {
 }
 
 
-$("adminButton").addEventListener(
-  "click",
-  () => {
+const adminButton = $("adminButton");
 
-    if (
-      !currentUser ||
-      !currentUser.isAdmin
-    ) {
+if (adminButton) {
 
-      alert("❌ Accès refusé.");
+  adminButton.addEventListener(
+    "click",
+    () => {
 
-      return;
+      if (
+        !currentUser ||
+        currentUser.pseudo !==
+        "creator2026"
+      ) {
+
+        alert(
+          "❌ Accès refusé."
+        );
+
+        return;
+
+      }
+
+      selectedAdminPlayer = null;
+
+      showMessage(
+        "adminPlayerResult",
+        ""
+      );
+
+      showMessage(
+        "adminMessage",
+        ""
+      );
+
+      openPage("adminPage");
 
     }
+  );
 
-    openPage("adminPage");
-
-    $("adminPlayerResult").innerHTML = "";
-
-    $("adminMessage").textContent = "";
-
-  }
-);
+}
 
 
 /* =====================================
-   CLASSES
+   CLASSES - AFFICHAGE
 ===================================== */
 
-async function loadClasses() {
+function getClassIcon(classe) {
 
-  const container =
-    $("classesList");
+  const name =
+    String(classe.name || "")
+      .toLowerCase();
 
-  container.textContent =
-    "Chargement des classes...";
+  if (name.includes("loup")) return "🐺";
 
-  try {
+  if (name.includes("voyante")) return "🔮";
 
-    const { response, data } =
-      await api("/api/classes");
+  if (name.includes("sorcière")) return "🧪";
 
-    if (!response.ok) {
+  if (name.includes("chasseur")) return "🎯";
 
-      container.textContent =
-        "❌ Impossible de charger les classes.";
+  if (name.includes("premium")) return "💎";
 
-      return;
-
-    }
-
-    serverClasses =
-      data.classes || [];
-
-    renderClasses();
-
-    updateAdminClassSelect();
-
-  } catch {
-
-    container.textContent =
-      "❌ Erreur de connexion.";
-
-  }
-
-}
-
-
-function getClassEmoji(className) {
-
-  if (
-    className.toLowerCase()
-      .includes("loup")
-  ) return "🐺";
-
-  if (
-    className.toLowerCase()
-      .includes("voyante")
-  ) return "🔮";
-
-  if (
-    className.toLowerCase()
-      .includes("sorci")
-  ) return "🧪";
-
-  if (
-    className.toLowerCase()
-      .includes("chasseur")
-  ) return "🎯";
-
-  if (
-    className.toLowerCase()
-      .includes("premium")
-  ) return "💎";
-
-  if (
-    className.toLowerCase()
-      .includes("admin")
-  ) return "👑";
+  if (name.includes("admin")) return "👑";
 
   return "🐺";
-
-}
-
-
-function getClassName(classId) {
-
-  const classe =
-    serverClasses.find(
-      (item) =>
-        item.id === classId
-    );
-
-  return classe
-    ? classe.name
-    : "Aucune";
 
 }
 
@@ -627,93 +894,110 @@ function renderClasses() {
   const container =
     $("classesList");
 
-  container.innerHTML = "";
+  if (!container) return;
 
-  if (!serverClasses.length) {
+  if (!currentUser) {
 
     container.textContent =
-      "Aucune classe disponible.";
+      "Tu dois être connecté.";
 
     return;
 
   }
 
-  serverClasses.forEach(
-    (classe) => {
+  container.innerHTML = "";
 
-      const owned =
-        (
-          currentUser.classes || []
-        ).includes(classe.id);
+  if (!CLASSES.length) {
 
-      const equipped =
-        currentUser.equippedClass ===
-        classe.id;
+    container.textContent =
+      "Chargement des classes...";
 
-      const card =
-        document.createElement("div");
+    return;
 
-      card.className =
-        "class-card" +
-        (
-          equipped
-            ? " equipped"
-            : ""
-        );
+  }
 
-      const emoji =
-        getClassEmoji(classe.name);
+  CLASSES.forEach((classe) => {
 
-      card.innerHTML = `
-        <div>
-          <h3>
-            ${emoji}
-            ${classe.name}
-          </h3>
-
-          <p>
-            🪙 ${classe.price}
-            • 🎲 ${classe.chance}% de chance
-          </p>
-        </div>
-
-        <button>
-          ${
-            equipped
-              ? "✓ Équipée"
-              : owned
-                ? "Équiper"
-                : "Acheter"
-          }
-        </button>
-      `;
-
-      const button =
-        card.querySelector("button");
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          if (equipped) return;
-
-          if (owned) {
-
-            equipClass(classe.id);
-
-          } else {
-
-            buyClass(classe.id);
-
-          }
-
-        }
+    const owned =
+      (
+        currentUser.classes || []
+      ).includes(
+        classe.id
       );
 
-      container.appendChild(card);
+    const equipped =
+      currentUser.equippedClass ===
+      classe.id;
+
+    const card =
+      document.createElement("div");
+
+    card.className =
+      "class-card" +
+      (
+        equipped
+          ? " equipped"
+          : ""
+      );
+
+    const icon =
+      getClassIcon(classe);
+
+    card.innerHTML = `
+      <div>
+        <h3>
+          ${icon}
+          ${escapeHTML(classe.name)}
+        </h3>
+
+        <p>
+          🪙 ${Number(classe.price || 0)}
+          • 🎲 ${Number(classe.chance || 0)}%
+        </p>
+      </div>
+
+      <button>
+        ${
+          equipped
+            ? "✓ Équipée"
+            : owned
+              ? "Équiper"
+              : "Acheter"
+        }
+      </button>
+    `;
+
+    const button =
+      card.querySelector("button");
+
+    if (equipped) {
+
+      button.disabled = true;
 
     }
-  );
+
+    button.addEventListener(
+      "click",
+      () => {
+
+        if (equipped) return;
+
+        if (owned) {
+
+          equipClass(classe.id);
+
+        } else {
+
+          buyClass(classe.id);
+
+        }
+
+      }
+    );
+
+    container.appendChild(card);
+
+  });
 
 }
 
@@ -725,7 +1009,7 @@ async function buyClass(classId) {
   try {
 
     const { response, data } =
-      await api(
+      await getJSON(
         "/api/classes/buy",
         {
           method: "POST",
@@ -738,7 +1022,6 @@ async function buyClass(classId) {
           body: JSON.stringify({
             pseudo:
               currentUser.pseudo,
-
             classId
           })
         }
@@ -767,9 +1050,13 @@ async function buyClass(classId) {
 
     renderClasses();
 
-    alert("🎉 Classe achetée !");
+    alert(
+      "🎉 Classe achetée !"
+    );
 
-  } catch {
+  } catch (error) {
+
+    console.error(error);
 
     alert(
       "❌ Erreur de connexion."
@@ -787,7 +1074,7 @@ async function equipClass(classId) {
   try {
 
     const { response, data } =
-      await api(
+      await getJSON(
         "/api/classes/equip",
         {
           method: "POST",
@@ -800,7 +1087,6 @@ async function equipClass(classId) {
           body: JSON.stringify({
             pseudo:
               currentUser.pseudo,
-
             classId
           })
         }
@@ -833,7 +1119,9 @@ async function equipClass(classId) {
       "✅ Classe équipée !"
     );
 
-  } catch {
+  } catch (error) {
+
+    console.error(error);
 
     alert(
       "❌ Erreur de connexion."
@@ -848,51 +1136,16 @@ async function equipClass(classId) {
    QUÊTES
 ===================================== */
 
-async function loadQuests() {
-
-  const container =
-    $("questsList");
-
-  container.textContent =
-    "Chargement des quêtes...";
-
-  try {
-
-    const { response, data } =
-      await api("/api/quests");
-
-    if (!response.ok) {
-
-      container.textContent =
-        "❌ Impossible de charger.";
-
-      return;
-
-    }
-
-    serverQuests =
-      data.quests || [];
-
-    renderQuests();
-
-  } catch {
-
-    container.textContent =
-      "❌ Erreur de connexion.";
-
-  }
-
-}
-
-
 function renderQuests() {
 
   const container =
     $("questsList");
 
+  if (!container) return;
+
   container.innerHTML = "";
 
-  if (!serverQuests.length) {
+  if (!QUESTS.length) {
 
     container.textContent =
       "Aucune quête disponible.";
@@ -901,66 +1154,71 @@ function renderQuests() {
 
   }
 
-  serverQuests.forEach(
-    (quest) => {
+  QUESTS.forEach((quest) => {
 
-      const card =
-        document.createElement("div");
+    const card =
+      document.createElement("div");
 
-      card.className =
-        "quest-card";
+    card.className =
+      "quest-card";
 
-      card.innerHTML = `
-        <h3>
-          ${quest.title}
-        </h3>
+    card.innerHTML = `
+      <h3>
+        ${escapeHTML(quest.title)}
+      </h3>
 
-        <p>
-          ${quest.description}
-        </p>
+      <p>
+        ${escapeHTML(quest.description)}
+      </p>
 
-        <p>
-          ✨ ${quest.xp} XP
-          • 🪙 ${quest.coins}
-        </p>
-      `;
+      <p>
+        ✨ ${Number(quest.xp || 0)} XP
+        • 🪙 ${Number(quest.coins || 0)}
+      </p>
+    `;
 
-      container.appendChild(card);
+    container.appendChild(card);
 
-    }
-  );
+  });
 
 }
 
 
 /* =====================================
-   SALONS - CRÉER
+   MULTIJOUEUR - CRÉER
 ===================================== */
 
-$("createRoomButton").addEventListener(
-  "click",
-  () => {
+const createRoomButton =
+  $("createRoomButton");
 
-    if (!currentUser) {
+if (createRoomButton) {
 
-      alert(
-        "Tu dois être connecté."
+  createRoomButton.addEventListener(
+    "click",
+    () => {
+
+      if (!currentUser) {
+
+        alert(
+          "Tu dois être connecté."
+        );
+
+        return;
+
+      }
+
+      socket.emit(
+        "createRoom",
+        {
+          pseudo:
+            currentUser.pseudo
+        }
       );
 
-      return;
-
     }
+  );
 
-    socket.emit(
-      "createRoom",
-      {
-        pseudo:
-          currentUser.pseudo
-      }
-    );
-
-  }
-);
+}
 
 
 socket.on(
@@ -973,11 +1231,20 @@ socket.on(
     isRoomHost =
       true;
 
-    $("joinRoomCode").value =
-      room.code;
+    if ($("joinRoomCode")) {
 
-    $("startGameButton")
-      .classList.remove("hidden");
+      $("joinRoomCode").value =
+        room.code;
+
+    }
+
+    if ($("startGameButton")) {
+
+      $("startGameButton")
+        .classList
+        .remove("hidden");
+
+    }
 
     renderCurrentRoom(room);
 
@@ -991,51 +1258,61 @@ socket.on(
 
 
 /* =====================================
-   REJOINDRE SALON
+   MULTIJOUEUR - REJOINDRE
 ===================================== */
 
-$("joinRoomButton").addEventListener(
-  "click",
-  () => {
+const joinRoomButton =
+  $("joinRoomButton");
 
-    if (!currentUser) {
+if (joinRoomButton) {
 
-      alert(
-        "Tu dois être connecté."
-      );
+  joinRoomButton.addEventListener(
+    "click",
+    () => {
 
-      return;
+      if (!currentUser) {
 
-    }
+        alert(
+          "Tu dois être connecté."
+        );
 
-    const code =
-      $("joinRoomCode")
-        .value
-        .trim()
-        .toUpperCase();
+        return;
 
-    if (!code) {
-
-      alert(
-        "Entre un code de partie."
-      );
-
-      return;
-
-    }
-
-    socket.emit(
-      "joinRoom",
-      {
-        code,
-
-        pseudo:
-          currentUser.pseudo
       }
-    );
 
-  }
-);
+      const input =
+        $("joinRoomCode");
+
+      const code =
+        String(
+          input?.value || ""
+        )
+          .trim()
+          .toUpperCase();
+
+      if (!code) {
+
+        alert(
+          "Entre un code de partie."
+        );
+
+        return;
+
+      }
+
+      socket.emit(
+        "joinRoom",
+        {
+          code,
+          pseudo:
+            currentUser.pseudo
+        }
+      );
+
+    }
+  );
+
+}
 
 
 socket.on(
@@ -1048,8 +1325,13 @@ socket.on(
     isRoomHost =
       false;
 
-    $("startGameButton")
-      .classList.add("hidden");
+    if ($("startGameButton")) {
+
+      $("startGameButton")
+        .classList
+        .add("hidden");
+
+    }
 
     renderCurrentRoom(room);
 
@@ -1066,7 +1348,8 @@ socket.on(
   (room) => {
 
     if (
-      currentRoomCode === room.code
+      currentRoomCode ===
+      room.code
     ) {
 
       renderCurrentRoom(room);
@@ -1090,47 +1373,65 @@ socket.on(
 
 
 /* =====================================
-   LANCER PARTIE
+   MULTIJOUEUR - DÉMARRER
 ===================================== */
 
-$("startGameButton").addEventListener(
-  "click",
-  () => {
+const startGameButton =
+  $("startGameButton");
 
-    if (!currentRoomCode) {
+if (startGameButton) {
 
-      alert(
-        "Aucune partie active."
+  startGameButton.addEventListener(
+    "click",
+    () => {
+
+      if (!currentUser) return;
+
+      if (!currentRoomCode) {
+
+        alert(
+          "Aucune partie sélectionnée."
+        );
+
+        return;
+
+      }
+
+      socket.emit(
+        "startGame",
+        {
+          code:
+            currentRoomCode,
+          pseudo:
+            currentUser.pseudo
+        }
       );
 
-      return;
-
     }
+  );
 
-    socket.emit(
-      "startGame",
-      {
-        code:
-          currentRoomCode,
-
-        pseudo:
-          currentUser.pseudo
-      }
-    );
-
-  }
-);
+}
 
 
 socket.on(
   "gameStarted",
   (game) => {
 
-    $("startGameButton")
-      .classList.add("hidden");
+    const startButton =
+      $("startGameButton");
+
+    if (startButton) {
+
+      startButton.classList.add(
+        "hidden"
+      );
+
+    }
 
     const container =
       $("roomsList");
+
+    if (!container) return;
 
     container.innerHTML = `
       <div class="room-card">
@@ -1140,12 +1441,8 @@ socket.on(
         </h2>
 
         <p>
-          Code : ${game.code}
-        </p>
-
-        <h3>
           Joueurs :
-        </h3>
+        </p>
 
         <div id="gamePlayers"></div>
 
@@ -1155,19 +1452,23 @@ socket.on(
     const players =
       $("gamePlayers");
 
-    game.players.forEach(
-      (pseudo) => {
+    if (players) {
 
-        const p =
-          document.createElement("p");
+      game.players.forEach(
+        (pseudo) => {
 
-        p.textContent =
-          "👤 " + pseudo;
+          const p =
+            document.createElement("p");
 
-        players.appendChild(p);
+          p.textContent =
+            "👤 " + pseudo;
 
-      }
-    );
+          players.appendChild(p);
+
+        }
+      );
+
+    }
 
     alert(
       "🐺 La partie commence !"
@@ -1178,7 +1479,7 @@ socket.on(
 
 
 /* =====================================
-   SALON ACTUEL
+   AFFICHAGE SALON ACTUEL
 ===================================== */
 
 function renderCurrentRoom(room) {
@@ -1186,64 +1487,47 @@ function renderCurrentRoom(room) {
   const container =
     $("roomsList");
 
+  if (!container) return;
+
+  const playersHTML =
+    room.players
+      .map(
+        (pseudo) =>
+          `<p>👤 ${escapeHTML(pseudo)}</p>`
+      )
+      .join("");
+
   container.innerHTML = `
     <div class="room-card">
 
       <h3>
-        🎮 Salon ${room.code}
+        🎮 Salon ${escapeHTML(room.code)}
       </h3>
 
       <p>
         👑 Créateur :
-        ${room.host}
-      </p>
-
-      <p>
-        👥 ${room.players.length}
-        joueur(s)
+        ${escapeHTML(room.host)}
       </p>
 
       <h4>
-        Joueurs :
+        Joueurs (${room.players.length})
       </h4>
 
-      <div id="currentPlayers"></div>
+      <div>
+        ${playersHTML}
+      </div>
 
     </div>
   `;
-
-  const playersContainer =
-    $("currentPlayers");
-
-  room.players.forEach(
-    (pseudo) => {
-
-      const player =
-        document.createElement("p");
-
-      player.textContent =
-        "👤 " + pseudo;
-
-      playersContainer.appendChild(player);
-
-    }
-  );
 
 }
 
 
 /* =====================================
-   LISTE SALONS
+   LISTE DES SALONS
 ===================================== */
 
 function loadRooms() {
-
-  currentRoomCode = null;
-
-  isRoomHost = false;
-
-  $("startGameButton")
-    .classList.add("hidden");
 
   socket.emit("getRooms");
 
@@ -1259,7 +1543,12 @@ socket.on(
     const container =
       $("roomsList");
 
-    if (!rooms.length) {
+    if (!container) return;
+
+    if (
+      !Array.isArray(rooms) ||
+      rooms.length === 0
+    ) {
 
       container.textContent =
         "Aucune partie disponible.";
@@ -1280,18 +1569,17 @@ socket.on(
           "room-card";
 
         card.innerHTML = `
-          <h3>
-            🎮 Partie ${room.code}
-          </h3>
+          <strong>
+            🎮 Code :
+            ${escapeHTML(room.code)}
+          </strong>
 
           <p>
-            👑 Créateur :
-            ${room.host}
+            👑 ${escapeHTML(room.host)}
           </p>
 
           <p>
-            👥
-            ${room.players.length}
+            👥 ${room.players.length}
             joueur(s)
           </p>
 
@@ -1300,27 +1588,28 @@ socket.on(
           </button>
         `;
 
-        card
-          .querySelector("button")
-          .addEventListener(
-            "click",
-            () => {
+        const button =
+          card.querySelector("button");
 
-              if (!currentUser) return;
+        button.addEventListener(
+          "click",
+          () => {
 
-              socket.emit(
-                "joinRoom",
-                {
-                  code:
-                    room.code,
+            if (!currentUser) return;
 
-                  pseudo:
-                    currentUser.pseudo
-                }
-              );
+            socket.emit(
+              "joinRoom",
+              {
+                code:
+                  room.code,
 
-            }
-          );
+                pseudo:
+                  currentUser.pseudo
+              }
+            );
+
+          }
+        );
 
         container.appendChild(card);
 
@@ -1332,100 +1621,210 @@ socket.on(
 
 
 /* =====================================
-   RECHERCHE JOUEUR / AMIS
+   AMIS - RECHERCHE JOUEUR
 ===================================== */
 
-$("searchFriendButton").addEventListener(
-  "click",
-  async () => {
+const searchFriendButton =
+  $("searchFriendButton");
 
-    const pseudo =
-      $("friendSearch")
-        .value
-        .trim();
+if (searchFriendButton) {
 
-    if (!pseudo) {
+  searchFriendButton.addEventListener(
+    "click",
+    async () => {
 
-      alert(
-        "Entre un pseudo."
-      );
+      const pseudo =
+        String(
+          $("friendSearch")?.value || ""
+        ).trim();
 
-      return;
+      if (!pseudo) {
 
-    }
-
-    const result =
-      $("friendResult");
-
-    result.textContent =
-      "🔎 Recherche...";
-
-    try {
-
-      const { response, data } =
-        await api(
-          "/api/users/" +
-          encodeURIComponent(pseudo)
+        alert(
+          "Entre un pseudo."
         );
-
-      if (!response.ok) {
-
-        result.textContent =
-          "❌ Joueur introuvable.";
 
         return;
 
       }
 
-      const user =
-        data.user;
+      const result =
+        $("friendResult");
 
-      result.innerHTML = `
-        <div class="friend-card">
-
-          <h3>
-            ${user.icon || "🐺"}
-            ${user.pseudo}
-          </h3>
-
-          <p>
-            ${user.title ||
-            "Nouveau Villageois"}
-          </p>
-
-          <p>
-            ⭐ Niveau ${user.level}
-          </p>
-
-          <p>
-            ✨ ${user.xp} XP
-          </p>
-
-          <p>
-            🏆 ${user.trophies} trophées
-          </p>
-
-          <p>
-            🐺 Classe :
-            ${
-              getClassName(
-                user.equippedClass
-              )
-            }
-          </p>
-
-        </div>
-      `;
-
-    } catch {
+      if (!result) return;
 
       result.textContent =
-        "❌ Erreur de connexion.";
+        "🔎 Recherche...";
+
+      try {
+
+        const { response, data } =
+          await getJSON(
+            "/api/users/" +
+            encodeURIComponent(pseudo)
+          );
+
+        if (!response.ok) {
+
+          result.textContent =
+            "❌ Joueur introuvable.";
+
+          return;
+
+        }
+
+        const user =
+          data.user;
+
+        const className =
+          CLASSES.find(
+            (classe) =>
+              classe.id ===
+              user.equippedClass
+          )?.name ||
+          "Aucune";
+
+        result.innerHTML = `
+          <div class="friend-card">
+
+            <strong>
+              ${escapeHTML(user.icon || "🐺")}
+              ${escapeHTML(user.pseudo)}
+            </strong>
+
+            <p>
+              ${escapeHTML(
+                user.title ||
+                "Nouveau Villageois"
+              )}
+            </p>
+
+            <p>
+              ⭐ Niveau ${Number(user.level || 1)}
+              • ✨ ${Number(user.xp || 0)} XP
+              • 🪙 ${Number(user.coins || 0)}
+            </p>
+
+            <p>
+              🐺 Classe :
+              ${escapeHTML(className)}
+            </p>
+
+          </div>
+        `;
+
+      } catch (error) {
+
+        console.error(error);
+
+        result.textContent =
+          "❌ Erreur de connexion.";
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =====================================
+   AMIS - LISTE
+
+   Les routes seront ajoutées
+   dans le prochain serveur.js.
+===================================== */
+
+async function loadFriends() {
+
+  const container =
+    $("friendsList");
+
+  if (!container) return;
+
+  if (!currentUser) {
+
+    container.textContent =
+      "Tu dois être connecté.";
+
+    return;
+
+  }
+
+  try {
+
+    const { response, data } =
+      await getJSON(
+        "/api/friends/" +
+        encodeURIComponent(
+          currentUser.pseudo
+        )
+      );
+
+    if (!response.ok) {
+
+      container.textContent =
+        "Le système d'amis sera activé avec le nouveau serveur.";
+
+      return;
 
     }
 
+    if (
+      !Array.isArray(data.friends) ||
+      !data.friends.length
+    ) {
+
+      container.textContent =
+        "Tu n'as pas encore d'amis.";
+
+      return;
+
+    }
+
+    container.innerHTML = "";
+
+    data.friends.forEach(
+      (friend) => {
+
+        const card =
+          document.createElement("div");
+
+        card.className =
+          "friend-card";
+
+        card.innerHTML = `
+          <strong>
+            ${escapeHTML(friend.icon || "🐺")}
+            ${escapeHTML(friend.pseudo)}
+          </strong>
+
+          <p>
+            ${escapeHTML(
+              friend.title ||
+              "Nouveau Villageois"
+            )}
+          </p>
+
+          <p>
+            ⭐ Niveau ${Number(friend.level || 1)}
+            • 🏆 ${Number(friend.trophies || 0)}
+          </p>
+        `;
+
+        container.appendChild(card);
+
+      }
+    );
+
+  } catch {
+
+    container.textContent =
+      "Le système d'amis sera activé avec le nouveau serveur.";
+
   }
-);
+
+}
 
 
 /* =====================================
@@ -1437,26 +1836,33 @@ async function loadRanking() {
   const container =
     $("rankingList");
 
+  if (!container) return;
+
   container.textContent =
-    "Chargement...";
+    "⏳ Chargement...";
 
   try {
 
     const { response, data } =
-      await api("/api/ranking");
+      await getJSON(
+        "/api/ranking"
+      );
 
     if (!response.ok) {
 
       container.textContent =
-        "❌ Impossible de charger.";
+        "❌ Impossible de charger le classement.";
 
       return;
 
     }
 
-    container.innerHTML = "";
+    const users =
+      Array.isArray(data.users)
+        ? data.users
+        : [];
 
-    if (!data.users.length) {
+    if (!users.length) {
 
       container.textContent =
         "Aucun joueur.";
@@ -1465,7 +1871,9 @@ async function loadRanking() {
 
     }
 
-    data.users.forEach(
+    container.innerHTML = "";
+
+    users.forEach(
       (user, index) => {
 
         const card =
@@ -1474,28 +1882,21 @@ async function loadRanking() {
         card.className =
           "ranking-card";
 
-        let medal = "";
-
-        if (index === 0) medal = "🥇";
-        else if (index === 1) medal = "🥈";
-        else if (index === 2) medal = "🥉";
-
         card.innerHTML = `
-          <h3>
-            ${medal}
+          <strong>
             #${index + 1}
-            ${user.icon || "🐺"}
-            ${user.pseudo}
-          </h3>
+            ${escapeHTML(user.icon || "🐺")}
+            ${escapeHTML(user.pseudo)}
+          </strong>
 
           <p>
-            🏆 ${user.trophies}
+            🏆 ${Number(user.trophies || 0)}
             trophée(s)
           </p>
 
           <p>
-            ⭐ Niveau ${user.level}
-            • ✨ ${user.xp} XP
+            ⭐ Niveau ${Number(user.level || 1)}
+            • ✨ ${Number(user.xp || 0)} XP
           </p>
         `;
 
@@ -1504,7 +1905,9 @@ async function loadRanking() {
       }
     );
 
-  } catch {
+  } catch (error) {
+
+    console.error(error);
 
     container.textContent =
       "❌ Impossible de charger.";
@@ -1518,189 +1921,202 @@ async function loadRanking() {
    ADMIN - RECHERCHE
 ===================================== */
 
-$("adminSearchButton").addEventListener(
-  "click",
-  async () => {
+const adminSearchButton =
+  $("adminSearchButton");
 
-    if (
-      !currentUser ||
-      !currentUser.isAdmin
-    ) {
+if (adminSearchButton) {
 
-      alert(
-        "❌ Accès refusé."
-      );
+  adminSearchButton.addEventListener(
+    "click",
+    async () => {
 
-      return;
+      if (
+        !currentUser ||
+        currentUser.pseudo !==
+        "creator2026"
+      ) {
 
-    }
-
-    const targetPseudo =
-      $("adminPlayerSearch")
-        .value
-        .trim();
-
-    const result =
-      $("adminPlayerResult");
-
-    if (!targetPseudo) {
-
-      result.textContent =
-        "Entre un pseudo.";
-
-      return;
-
-    }
-
-    result.textContent =
-      "🔎 Recherche...";
-
-    try {
-
-      const { response, data } =
-        await api(
-          "/api/admin/users/" +
-          encodeURIComponent(targetPseudo) +
-          "?adminPseudo=" +
-          encodeURIComponent(
-            currentUser.pseudo
-          )
+        alert(
+          "❌ Accès refusé."
         );
-
-      if (!response.ok) {
-
-        result.textContent =
-          "❌ " +
-          (
-            data.message ||
-            "Joueur introuvable."
-          );
 
         return;
 
       }
 
-      const user =
-        data.user;
+      const targetPseudo =
+        String(
+          $("adminPlayerSearch")?.value || ""
+        ).trim();
 
-      result.innerHTML = `
-        <div class="friend-card">
+      const result =
+        $("adminPlayerResult");
 
-          <h3>
-            ${user.icon || "🐺"}
-            ${user.pseudo}
-          </h3>
+      if (!targetPseudo) {
 
-          <p>
-            ⭐ Niveau :
-            ${user.level}
-          </p>
+        showMessage(
+          "adminPlayerResult",
+          "❌ Entre un pseudo."
+        );
 
-          <p>
-            ✨ XP :
-            ${user.xp}
-          </p>
+        return;
 
-          <p>
-            🪙 Pièces :
-            ${user.coins}
-          </p>
+      }
 
-          <p>
-            🏆 Trophées :
-            ${user.trophies}
-          </p>
+      showMessage(
+        "adminPlayerResult",
+        "🔎 Recherche..."
+      );
 
-          <p>
-            🐺 Classe :
-            ${
-              getClassName(
-                user.equippedClass
-              )
-            }
-          </p>
+      try {
 
-        </div>
-      `;
+        const { response, data } =
+          await getJSON(
+            "/api/admin/users/" +
+            encodeURIComponent(targetPseudo) +
+            "?adminPseudo=" +
+            encodeURIComponent(
+              currentUser.pseudo
+            )
+          );
 
-    } catch {
+        if (!response.ok) {
 
-      result.textContent =
-        "❌ Erreur de connexion.";
+          selectedAdminPlayer =
+            null;
+
+          showMessage(
+            "adminPlayerResult",
+            "❌ " +
+            (
+              data.message ||
+              "Joueur introuvable."
+            )
+          );
+
+          return;
+
+        }
+
+        const user =
+          data.user;
+
+        selectedAdminPlayer =
+          user.pseudo;
+
+        result.innerHTML = `
+          <div class="friend-card">
+
+            <h3>
+              ${escapeHTML(user.icon || "🐺")}
+              ${escapeHTML(user.pseudo)}
+            </h3>
+
+            <p>
+              ⭐ Niveau :
+              ${Number(user.level || 1)}
+            </p>
+
+            <p>
+              ✨ XP :
+              ${Number(user.xp || 0)}
+            </p>
+
+            <p>
+              🪙 Pièces :
+              ${Number(user.coins || 0)}
+            </p>
+
+            <p>
+              🏆 Trophées :
+              ${Number(user.trophies || 0)}
+            </p>
+
+          </div>
+        `;
+
+        showMessage(
+          "adminMessage",
+          "✅ Joueur sélectionné : " +
+          user.pseudo
+        );
+
+      } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+          "adminPlayerResult",
+          "❌ Erreur de connexion."
+        );
+
+      }
 
     }
+  );
 
-  }
-);
+}
 
 
 /* =====================================
    ADMIN - TYPE RÉCOMPENSE
 ===================================== */
 
-$("adminRewardType").addEventListener(
-  "change",
-  () => {
+const adminRewardType =
+  $("adminRewardType");
 
-    const type =
-      $("adminRewardType").value;
+if (adminRewardType) {
 
-    const classSelect =
-      $("adminClassSelect");
+  adminRewardType.addEventListener(
+    "change",
+    () => {
 
-    const amount =
-      $("adminAmount");
+      const classSelect =
+        $("adminClassSelect");
 
-    if (type === "class") {
+      const amount =
+        $("adminAmount");
 
-      classSelect.classList.remove("hidden");
+      if (
+        adminRewardType.value ===
+        "class"
+      ) {
 
-      amount.classList.add("hidden");
+        if (classSelect) {
 
-    } else {
+          classSelect.classList.remove(
+            "hidden"
+          );
 
-      classSelect.classList.add("hidden");
+        }
 
-      amount.classList.remove("hidden");
+        if (amount) {
 
-    }
+          amount.classList.add(
+            "hidden"
+          );
 
-  }
-);
+        }
 
+      } else {
 
-/* =====================================
-   ADMIN - CLASSES SELECT
-===================================== */
+        if (classSelect) {
 
-function updateAdminClassSelect() {
+          classSelect.classList.add(
+            "hidden"
+          );
 
-  const select =
-    $("adminClassSelect");
+        }
 
-  if (!select) return;
+        if (amount) {
 
-  if (!serverClasses.length) return;
+          amount.classList.remove(
+            "hidden"
+          );
 
-  select.innerHTML = "";
+        }
 
-  serverClasses.forEach(
-    (classe) => {
-
-      const option =
-        document.createElement("option");
-
-      option.value =
-        classe.id;
-
-      option.textContent =
-        getClassEmoji(
-          classe.name
-        ) +
-        " " +
-        classe.name;
-
-      select.appendChild(option);
+      }
 
     }
   );
@@ -1712,476 +2128,554 @@ function updateAdminClassSelect() {
    ADMIN - DONNER RÉCOMPENSE
 ===================================== */
 
-$("adminGiveButton").addEventListener(
-  "click",
-  async () => {
-
-    if (
-      !currentUser ||
-      !currentUser.isAdmin
-    ) {
-
-      alert(
-        "❌ Accès refusé."
-      );
-
-      return;
-
-    }
-
-    const targetPseudo =
-      $("adminPlayerSearch")
-        .value
-        .trim();
-
-    const type =
-      $("adminRewardType")
-        .value;
-
-    const amount =
-      Math.max(
-        0,
-        Number(
-          $("adminAmount").value
-        ) || 0
-      );
-
-    const classId =
-      $("adminClassSelect")
-        .value;
-
-    if (!targetPseudo) {
-
-      $("adminMessage").textContent =
-        "❌ Recherche d'abord un joueur.";
-
-      return;
-
-    }
-
-    const body = {
-
-      adminPseudo:
-        currentUser.pseudo,
-
-      targetPseudo,
-
-      coins: 0,
-
-      xp: 0,
-
-      trophies: 0,
-
-      classId: ""
-
-    };
-
-    if (type === "coins") {
-
-      body.coins =
-        amount;
-
-    }
-
-    if (type === "xp") {
-
-      body.xp =
-        amount;
-
-    }
-
-    if (type === "level") {
-
-      /*
-       Le serveur actuel ne possède
-       pas encore de récompense "niveau".
-       On convertit temporairement
-       le niveau en XP.
-      */
-
-      body.xp =
-        amount * 500;
-
-    }
-
-    if (type === "class") {
-
-      body.classId =
-        classId;
-
-    }
-
-    if (
-      type !== "class" &&
-      amount <= 0
-    ) {
-
-      $("adminMessage").textContent =
-        "❌ Entre une quantité valide.";
-
-      return;
-
-    }
-
-    $("adminMessage").textContent =
-      "⏳ Envoi...";
-
-    try {
-
-      const { response, data } =
-        await api(
-          "/api/admin/reward",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify(body)
-
-          }
-        );
-
-      $("adminMessage").textContent =
-        (
-          response.ok
-            ? "✅ "
-            : "❌ "
-        ) +
-        (
-          data.message ||
-          "Erreur."
-        );
-
-    } catch {
-
-      $("adminMessage").textContent =
-        "❌ Erreur de connexion.";
-
-    }
-
-  }
-);
-
-
-/* =====================================
-   PARAMÈTRES - EMAIL
-===================================== */
-
-$("changeEmailButton").addEventListener(
-  "click",
-  async () => {
-
-    if (!currentUser) return;
-
-    const email =
-      $("newEmail")
-        .value
-        .trim();
-
-    const password =
-      $("emailPassword")
-        .value;
-
-    try {
-
-      const { response, data } =
-        await api(
-          "/api/account/email",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              pseudo:
-                currentUser.pseudo,
-
-              email,
-
-              password
-            })
-
-          }
-        );
-
-      alert(
-        (
-          response.ok
-            ? "✅ "
-            : "❌ "
-        ) +
-        (
-          data.message ||
-          "Erreur."
-        )
-      );
-
-    } catch {
-
-      alert(
-        "❌ Erreur de connexion."
-      );
-
-    }
-
-  }
-);
-
-
-/* =====================================
-   PARAMÈTRES - SUPPRIMER COMPTE
-===================================== */
-
-$("deleteAccountButton").addEventListener(
-  "click",
-  async () => {
-
-    if (!currentUser) return;
-
-    const password =
-      $("deletePassword")
-        .value;
-
-    if (
-      !confirm(
-        "Supprimer définitivement ton compte ?"
-      )
-    ) {
-
-      return;
-
-    }
-
-    try {
-
-      const { response, data } =
-        await api(
-          "/api/account/delete",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              pseudo:
-                currentUser.pseudo,
-
-              password
-            })
-
-          }
-        );
-
-      if (!response.ok) {
+const adminGiveButton =
+  $("adminGiveButton");
+
+if (adminGiveButton) {
+
+  adminGiveButton.addEventListener(
+    "click",
+    async () => {
+
+      if (
+        !currentUser ||
+        currentUser.pseudo !==
+        "creator2026"
+      ) {
 
         alert(
-          "❌ " +
-          (
-            data.message ||
-            "Erreur."
-          )
+          "❌ Accès refusé."
         );
 
         return;
 
       }
 
-      alert(
-        "✅ Compte supprimé."
-      );
+      if (!selectedAdminPlayer) {
 
-      logout();
+        showMessage(
+          "adminMessage",
+          "❌ Recherche d'abord un joueur."
+        );
 
-    } catch {
+        return;
 
-      alert(
-        "❌ Erreur de connexion."
-      );
+      }
+
+      const type =
+        $("adminRewardType").value;
+
+      const amount =
+        Math.max(
+          0,
+          Number(
+            $("adminAmount")?.value || 0
+          )
+        );
+
+      const classId =
+        String(
+          $("adminClassSelect")?.value || ""
+        );
+
+      const reward = {
+
+        adminPseudo:
+          currentUser.pseudo,
+
+        targetPseudo:
+          selectedAdminPlayer,
+
+        coins: 0,
+
+        xp: 0,
+
+        trophies: 0,
+
+        classId: ""
+
+      };
+
+
+      if (type === "coins") {
+
+        reward.coins =
+          amount;
+
+      }
+
+      if (type === "xp") {
+
+        reward.xp =
+          amount;
+
+      }
+
+      if (type === "level") {
+
+        reward.xp =
+          amount * 500;
+
+      }
+
+      if (type === "class") {
+
+        reward.classId =
+          classId;
+
+      }
+
+
+      if (
+        type !== "class" &&
+        amount <= 0
+      ) {
+
+        showMessage(
+          "adminMessage",
+          "❌ Entre une quantité valide."
+        );
+
+        return;
+
+      }
+
+
+      try {
+
+        showMessage(
+          "adminMessage",
+          "⏳ Envoi..."
+        );
+
+        const { response, data } =
+          await getJSON(
+            "/api/admin/reward",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify(
+                reward
+              )
+            }
+          );
+
+        showMessage(
+          "adminMessage",
+          (
+            response.ok
+              ? "✅ "
+              : "❌ "
+          ) +
+          (
+            data.message ||
+            "Erreur."
+          )
+        );
+
+      } catch (error) {
+
+        console.error(error);
+
+        showMessage(
+          "adminMessage",
+          "❌ Erreur de connexion."
+        );
+
+      }
 
     }
-
-  }
-);
-
-
-/* =====================================
-   DÉCONNEXION
-===================================== */
-
-function logout() {
-
-  localStorage.removeItem(
-    "lgv7_user"
   );
-
-  currentUser = null;
-
-  currentRoomCode = null;
-
-  isRoomHost = false;
-
-  $("startGameButton")
-    .classList.add("hidden");
-
-  $("menuScreen")
-    .classList.add("hidden");
-
-  $("forgotScreen")
-    .classList.add("hidden");
-
-  $("authScreen")
-    .classList.remove("hidden");
-
-  hidePages();
 
 }
 
 
-$("logoutButton").addEventListener(
-  "click",
-  logout
-);
+/* =====================================
+   PARAMÈTRES - DÉCONNEXION
+===================================== */
+
+const logoutButton =
+  $("logoutButton");
+
+if (logoutButton) {
+
+  logoutButton.addEventListener(
+    "click",
+    () => {
+
+      localStorage.removeItem(
+        "lgv7_user"
+      );
+
+      currentUser =
+        null;
+
+      currentRoomCode =
+        null;
+
+      isRoomHost =
+        false;
+
+      selectedAdminPlayer =
+        null;
+
+      const startButton =
+        $("startGameButton");
+
+      if (startButton) {
+
+        startButton.classList.add(
+          "hidden"
+        );
+
+      }
+
+      hidePages();
+
+      $("menuScreen")
+        ?.classList
+        .add("hidden");
+
+      $("forgotScreen")
+        ?.classList
+        .add("hidden");
+
+      $("authScreen")
+        ?.classList
+        .remove("hidden");
+
+      showLogin();
+
+    }
+  );
+
+}
+
+
+/* =====================================
+   PARAMÈTRES - EMAIL
+===================================== */
+
+const changeEmailButton =
+  $("changeEmailButton");
+
+if (changeEmailButton) {
+
+  changeEmailButton.addEventListener(
+    "click",
+    async () => {
+
+      if (!currentUser) return;
+
+      const email =
+        $("newEmail").value.trim();
+
+      const password =
+        $("emailPassword").value;
+
+      if (!email || !password) {
+
+        alert(
+          "Remplis tous les champs."
+        );
+
+        return;
+
+      }
+
+      try {
+
+        const { response, data } =
+          await getJSON(
+            "/api/account/email",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                pseudo:
+                  currentUser.pseudo,
+
+                email,
+
+                password
+              })
+            }
+          );
+
+        alert(
+          (
+            response.ok
+              ? "✅ "
+              : "❌ "
+          ) +
+          (
+            data.message ||
+            "Erreur."
+          )
+        );
+
+        if (response.ok) {
+
+          currentUser.email =
+            email;
+
+          saveCurrentUser();
+
+          $("newEmail").value =
+            "";
+
+          $("emailPassword").value =
+            "";
+
+        }
+
+      } catch {
+
+        alert(
+          "❌ Erreur de connexion."
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =====================================
+   PARAMÈTRES - SUPPRESSION
+===================================== */
+
+const deleteAccountButton =
+  $("deleteAccountButton");
+
+if (deleteAccountButton) {
+
+  deleteAccountButton.addEventListener(
+    "click",
+    async () => {
+
+      if (!currentUser) return;
+
+      const password =
+        $("deletePassword").value;
+
+      if (!password) {
+
+        alert(
+          "Entre ton mot de passe."
+        );
+
+        return;
+
+      }
+
+      if (
+        !confirm(
+          "Supprimer définitivement ton compte ?"
+        )
+      ) {
+
+        return;
+
+      }
+
+      try {
+
+        const { response, data } =
+          await getJSON(
+            "/api/account/delete",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                pseudo:
+                  currentUser.pseudo,
+
+                password
+              })
+            }
+          );
+
+        if (!response.ok) {
+
+          alert(
+            "❌ " +
+            (
+              data.message ||
+              "Erreur."
+            )
+          );
+
+          return;
+
+        }
+
+        alert(
+          "✅ Compte supprimé."
+        );
+
+        logoutButton?.click();
+
+      } catch {
+
+        alert(
+          "❌ Erreur de connexion."
+        );
+
+      }
+
+    }
+  );
+
+}
 
 
 /* =====================================
    MOT DE PASSE OUBLIÉ
 ===================================== */
 
-$("forgotPasswordButton").addEventListener(
-  "click",
-  () => {
+const forgotPasswordButton =
+  $("forgotPasswordButton");
 
-    $("authScreen")
-      .classList.add("hidden");
+if (forgotPasswordButton) {
 
-    $("forgotScreen")
-      .classList.remove("hidden");
+  forgotPasswordButton.addEventListener(
+    "click",
+    () => {
 
-  }
-);
+      $("authScreen")
+        ?.classList
+        .add("hidden");
 
+      $("forgotScreen")
+        ?.classList
+        .remove("hidden");
 
-$("backToLoginButton").addEventListener(
-  "click",
-  () => {
-
-    $("forgotScreen")
-      .classList.add("hidden");
-
-    $("authScreen")
-      .classList.remove("hidden");
-
-  }
-);
-
-
-$("sendResetButton").addEventListener(
-  "click",
-  async () => {
-
-    const pseudo =
-      $("forgotPseudo")
-        .value
-        .trim();
-
-    try {
-
-      const { data } =
-        await api(
-          "/api/password/forgot",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json"
-            },
-
-            body: JSON.stringify({
-              pseudo
-            })
-
-          }
-        );
-
-      $("forgotMessage").textContent =
-        data.message ||
-        "Demande envoyée.";
-
-    } catch {
-
-      $("forgotMessage").textContent =
-        "❌ Erreur de connexion.";
+      showMessage(
+        "forgotMessage",
+        ""
+      );
 
     }
-
-  }
-);
-
-
-/* =====================================
-   NOTIFICATIONS
-===================================== */
-
-async function loadNotifications() {
-
-  if (!currentUser) return;
-
-  try {
-
-    const { response, data } =
-      await api(
-        "/api/notifications/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    if (!response.ok) return;
-
-    const notifications =
-      data.notifications || [];
-
-    const unclaimed =
-      notifications.filter(
-        (notification) =>
-          !notification.claimed
-      );
-
-    if (!unclaimed.length) return;
-
-    console.log(
-      "Notifications disponibles :",
-      unclaimed
-    );
-
-  } catch {
-
-    console.log(
-      "Impossible de charger les notifications."
-    );
-
-  }
+  );
 
 }
 
 
+const backToLoginButton =
+  $("backToLoginButton");
+
+if (backToLoginButton) {
+
+  backToLoginButton.addEventListener(
+    "click",
+    () => {
+
+      $("forgotScreen")
+        ?.classList
+        .add("hidden");
+
+      $("authScreen")
+        ?.classList
+        .remove("hidden");
+
+    }
+  );
+
+}
+
+
+const sendResetButton =
+  $("sendResetButton");
+
+if (sendResetButton) {
+
+  sendResetButton.addEventListener(
+    "click",
+    async () => {
+
+      const pseudo =
+        String(
+          $("forgotPseudo")?.value || ""
+        ).trim();
+
+      if (!pseudo) {
+
+        showMessage(
+          "forgotMessage",
+          "❌ Entre ton pseudo."
+        );
+
+        return;
+
+      }
+
+      try {
+
+        const { data } =
+          await getJSON(
+            "/api/password/forgot",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                pseudo
+              })
+            }
+          );
+
+        showMessage(
+          "forgotMessage",
+          data.message ||
+          "Demande envoyée."
+        );
+
+      } catch {
+
+        showMessage(
+          "forgotMessage",
+          "❌ Erreur de connexion."
+        );
+
+      }
+
+    }
+  );
+
+
 /* =====================================
-   RESTAURATION SESSION
+   RESTAURER SESSION
 ===================================== */
 
 window.addEventListener(
   "load",
-  () => {
+  async () => {
+
+    await loadClasses();
+
+    await loadQuests();
 
     const saved =
       localStorage.getItem(
@@ -2202,11 +2696,11 @@ window.addEventListener(
 
         loginUser(user);
 
-        loadNotifications();
-
       }
 
-    } catch {
+    } catch (error) {
+
+      console.error(error);
 
       localStorage.removeItem(
         "lgv7_user"
