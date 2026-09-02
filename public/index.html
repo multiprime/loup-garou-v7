@@ -2,7 +2,6 @@
 <html lang="fr">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
@@ -10,86 +9,108 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>🐺 Loup-Garou V7</title>
+  <title>Loup-Garou V7</title>
 
   <link
     rel="stylesheet"
     href="style.css"
   >
-
 </head>
-
 
 <body>
 
+  <!-- ==============================
+       ÉCRAN CONNEXION / INSCRIPTION
+  =============================== -->
 
-  <!-- =====================================
-       CONNEXION / INSCRIPTION
-  ===================================== -->
+  <section
+    id="authScreen"
+    class="screen"
+  >
 
-  <main id="authScreen">
-
-    <div class="auth-card">
+    <div class="auth-container">
 
       <h1>🐺 Loup-Garou V7</h1>
 
-      <p>
-        Crée ton compte et joue avec tes amis !
+      <p class="subtitle">
+        Entre dans le village et joue avec tes amis !
       </p>
 
 
       <!-- ONGLETS -->
 
-      <div class="tabs">
+      <div class="auth-tabs">
 
         <button
           id="loginTab"
           class="active"
           type="button"
         >
-          🔑 Connexion
+          Connexion
         </button>
 
         <button
           id="registerTab"
           type="button"
         >
-          📝 Créer un compte
+          Inscription
         </button>
 
       </div>
+
+
+      <!-- MESSAGE -->
+
+      <p
+        id="authMessage"
+        class="message"
+      ></p>
 
 
       <!-- FORMULAIRE CONNEXION -->
 
       <form id="loginForm">
 
+        <label for="loginPseudo">
+          Pseudo
+        </label>
+
         <input
           id="loginPseudo"
           type="text"
-          placeholder="Pseudo"
-          autocomplete="username"
+          placeholder="Ton pseudo"
           required
+          autocomplete="username"
         >
+
+
+        <label for="loginPassword">
+          Mot de passe
+        </label>
 
         <input
           id="loginPassword"
           type="password"
-          placeholder="Mot de passe"
-          autocomplete="current-password"
+          placeholder="Ton mot de passe"
           required
+          autocomplete="current-password"
         >
 
-        <button type="submit">
-          🚀 Se connecter
+
+        <button
+          type="submit"
+          class="main-button"
+        >
+          🔐 Se connecter
         </button>
+
 
         <button
           id="forgotPasswordButton"
           type="button"
           class="link-button"
         >
-          J'ai oublié mon mot de passe
+          Mot de passe oublié ?
         </button>
 
       </form>
@@ -102,157 +123,216 @@
         class="hidden"
       >
 
+        <label for="registerPseudo">
+          Pseudo
+        </label>
+
         <input
           id="registerPseudo"
           type="text"
-          placeholder="Choisis ton pseudo"
-          minlength="3"
-          maxlength="20"
-          autocomplete="username"
+          placeholder="Choisis un pseudo"
           required
+          autocomplete="username"
         >
+
+
+        <label for="registerEmail">
+          Email
+        </label>
 
         <input
           id="registerEmail"
           type="email"
-          placeholder="Adresse e-mail"
-          autocomplete="email"
+          placeholder="ton@email.com"
           required
+          autocomplete="email"
         >
+
+
+        <label for="registerPassword">
+          Mot de passe
+        </label>
 
         <input
           id="registerPassword"
           type="password"
-          placeholder="Mot de passe"
-          minlength="6"
-          autocomplete="new-password"
+          placeholder="Choisis un mot de passe"
           required
+          autocomplete="new-password"
         >
 
-        <button type="submit">
-          🐺 Créer mon compte
+
+        <button
+          type="submit"
+          class="main-button"
+        >
+          🎁 Créer mon compte
         </button>
 
       </form>
 
+    </div>
 
-      <p id="authMessage"></p>
+  </section>
+
+
+  <!-- ==============================
+       MOT DE PASSE OUBLIÉ
+  =============================== -->
+
+  <section
+    id="forgotScreen"
+    class="screen hidden"
+  >
+
+    <div class="auth-container">
+
+      <h2>🔑 Mot de passe oublié</h2>
+
+      <p>
+        Entre ton pseudo.
+      </p>
+
+
+      <input
+        id="forgotPseudo"
+        type="text"
+        placeholder="Ton pseudo"
+      >
+
+
+      <button
+        id="sendResetButton"
+        type="button"
+        class="main-button"
+      >
+        Envoyer la demande
+      </button>
+
+
+      <p
+        id="forgotMessage"
+        class="message"
+      ></p>
+
+
+      <button
+        id="backToLoginButton"
+        type="button"
+        class="link-button"
+      >
+        ← Retour à la connexion
+      </button>
 
     </div>
 
-  </main>
+  </section>
 
 
-
-  <!-- =====================================
+  <!-- ==============================
        MENU PRINCIPAL
-  ===================================== -->
+  =============================== -->
 
-  <main
+  <section
     id="menuScreen"
-    class="hidden"
+    class="screen hidden"
   >
 
+    <header class="top-header">
 
-    <!-- PROFIL -->
+      <h1>🐺 Loup-Garou V7</h1>
 
-    <header class="main-header">
-
-      <div class="profile-area">
-
-        <div
-          id="profileIcon"
-          class="profile-icon"
-        >
-          🐺
-        </div>
-
-
-        <div class="profile-info">
-
-          <h2 id="playerName">
-            Joueur
-          </h2>
-
-          <p id="playerTitle">
-            Nouveau Villageois
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <!-- STATISTIQUES -->
-
-      <div class="player-stats">
-
-        <span>
-          ⭐ Niveau
-          <strong id="playerLevel">1</strong>/100
-        </span>
-
-        <span>
-          ✨
-          <strong id="playerXp">0</strong>
-          XP
-        </span>
-
-        <span>
-          🪙
-          <strong id="playerCoins">0</strong>
-        </span>
-
-        <span>
-          🏆
-          <strong id="playerTrophies">0</strong>
-        </span>
-
-      </div>
+      <button
+        id="backButton"
+        type="button"
+        class="back-button hidden"
+      >
+        ← Retour
+      </button>
 
     </header>
 
 
+    <!-- PROFIL -->
 
-    <!-- PROGRESSION XP -->
+    <div class="profile-card">
 
-    <section class="xp-section">
+      <div
+        id="profileIcon"
+        class="profile-icon"
+      >
+        🐺
+      </div>
 
-      <h3>
-        ⭐ Progression
-      </h3>
 
-      <div class="xp-bar">
+      <div class="profile-info">
 
-        <div
-          id="xpProgress"
-          class="xp-progress"
-          style="width: 0%"
-        ></div>
+        <h2 id="playerName">
+          Joueur
+        </h2>
+
+        <p id="playerTitle">
+          Nouveau Villageois
+        </p>
 
       </div>
 
-    </section>
+    </div>
 
+
+    <!-- STATISTIQUES -->
+
+    <div class="stats-container">
+
+      <div class="stat-card">
+        <span>⭐ Niveau</span>
+        <strong id="playerLevel">1</strong>
+      </div>
+
+
+      <div class="stat-card">
+        <span>✨ XP</span>
+        <strong id="playerXp">0</strong>
+      </div>
+
+
+      <div class="stat-card">
+        <span>🪙 Pièces</span>
+        <strong id="playerCoins">0</strong>
+      </div>
+
+
+      <div class="stat-card">
+        <span>🏆 Trophées</span>
+        <strong id="playerTrophies">0</strong>
+      </div>
+
+    </div>
+
+
+    <!-- BARRE XP -->
+
+    <div class="xp-container">
+
+      <div class="xp-bar">
+
+        <div id="xpProgress"></div>
+
+      </div>
+
+    </div>
 
 
     <!-- BOUTONS MENU -->
 
-    <section class="menu-buttons">
+    <div class="menu-buttons">
 
       <button
         id="playButton"
         type="button"
+        class="main-button"
       >
-        🎮 Jouer en ligne
-      </button>
-
-
-      <button
-        id="friendsButton"
-        type="button"
-      >
-        👥 Amis
+        🎮 Jouer
       </button>
 
 
@@ -269,6 +349,14 @@
         type="button"
       >
         📜 Quêtes
+      </button>
+
+
+      <button
+        id="friendsButton"
+        type="button"
+      >
+        👥 Amis
       </button>
 
 
@@ -296,178 +384,146 @@
         👑 Administration
       </button>
 
-    </section>
+    </div>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          SALON DE JEU
-    ===================================== -->
+    =============================== -->
 
     <section
       id="gameLobby"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        🎮 Jouer en ligne
-      </h2>
-
-      <p>
-        Crée une partie ou rejoins tes amis.
-      </p>
+      <h2>🎮 Jouer</h2>
 
 
-      <div class="lobby-actions">
+      <div class="lobby-controls">
 
         <button
           id="createRoomButton"
           type="button"
+          class="main-button"
         >
           ➕ Créer une partie
         </button>
 
 
+        <div class="join-room">
+
+          <input
+            id="joinRoomCode"
+            type="text"
+            placeholder="Code du salon"
+            maxlength="10"
+          >
+
+          <button
+            id="joinRoomButton"
+            type="button"
+          >
+            Rejoindre
+          </button>
+
+        </div>
+
+
         <button
           id="startGameButton"
           type="button"
-          class="hidden"
+          class="main-button hidden"
         >
-          ▶️ Lancer la partie
+          🚀 Lancer la partie
         </button>
 
       </div>
 
 
-      <hr>
-
-
-      <h3>
-        🔑 Rejoindre avec un code
-      </h3>
-
-
-      <input
-        id="joinRoomCode"
-        type="text"
-        placeholder="Code de la partie"
-        maxlength="10"
-        autocomplete="off"
-      >
-
-
-      <button
-        id="joinRoomButton"
-        type="button"
-      >
-        🚪 Rejoindre
-      </button>
-
-
-      <hr>
-
-
-      <h3>
-        🌐 Parties disponibles
-      </h3>
-
+      <h3>Parties disponibles</h3>
 
       <div id="roomsList">
-        Chargement des parties...
+
+        Chargement...
+
       </div>
 
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          CLASSES
-    ===================================== -->
+    =============================== -->
 
     <section
       id="classesPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        🐺 Classes
-      </h2>
+      <h2>🐺 Classes</h2>
 
       <p>
-        Achète et équipe des classes pour ton
-        personnage.
+        Achète et équipe tes classes.
       </p>
-
-      <p>
-        Une classe équipée augmente tes chances
-        d'obtenir un rôle au début d'une partie.
-      </p>
-
 
       <div id="classesList">
+
         Chargement...
+
       </div>
 
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          QUÊTES
-    ===================================== -->
+    =============================== -->
 
     <section
       id="questsPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        📜 Quêtes
-      </h2>
+      <h2>📜 Quêtes</h2>
 
       <p>
-        Réalise des objectifs pour gagner de
-        l'expérience et des pièces.
+        Termine des objectifs pour gagner des récompenses.
       </p>
 
-
       <div id="questsList">
+
         Chargement...
+
       </div>
 
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          AMIS
-    ===================================== -->
+    =============================== -->
 
     <section
       id="friendsPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        👥 Rechercher un joueur
-      </h2>
+      <h2>👥 Amis</h2>
 
 
-      <div class="search-row">
+      <div class="friend-search">
 
         <input
           id="friendSearch"
           type="text"
-          placeholder="Pseudo d'un joueur"
-          autocomplete="off"
+          placeholder="Pseudo du joueur"
         >
-
 
         <button
           id="searchFriendButton"
           type="button"
         >
-          🔎 Rechercher
+          🔍 Rechercher
         </button>
 
       </div>
@@ -478,426 +534,286 @@
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          CLASSEMENT
-    ===================================== -->
+    =============================== -->
 
     <section
       id="rankingPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        🏆 Top 100 mondial
-      </h2>
-
-      <p>
-        Classement selon le nombre de trophées.
-      </p>
-
+      <h2>🏆 Classement</h2>
 
       <div id="rankingList">
+
         Chargement...
+
       </div>
 
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          PARAMÈTRES
-    ===================================== -->
+    =============================== -->
 
     <section
       id="settingsPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        ⚙️ Paramètres
-      </h2>
+      <h2>⚙️ Paramètres</h2>
 
 
       <!-- EMAIL -->
 
-      <div class="settings-block">
+      <div class="settings-card">
 
-        <h3>
-          📧 Modifier l'adresse e-mail
-        </h3>
-
+        <h3>📧 Changer mon email</h3>
 
         <input
           id="newEmail"
           type="email"
-          placeholder="Nouvelle adresse e-mail"
-          autocomplete="email"
+          placeholder="Nouvel email"
         >
-
 
         <input
           id="emailPassword"
           type="password"
-          placeholder="Ton mot de passe actuel"
-          autocomplete="current-password"
+          placeholder="Mot de passe actuel"
         >
-
 
         <button
           id="changeEmailButton"
           type="button"
         >
-          💾 Modifier mon e-mail
+          Modifier l'email
         </button>
 
       </div>
-
-
-      <hr>
 
 
       <!-- SUPPRESSION -->
 
-      <div class="settings-block">
+      <div class="settings-card danger-zone">
 
-        <h3>
-          🗑️ Supprimer mon compte
-        </h3>
-
-
-        <p>
-          Cette action est définitive.
-        </p>
-
+        <h3>🗑️ Supprimer mon compte</h3>
 
         <input
           id="deletePassword"
           type="password"
-          placeholder="Confirme ton mot de passe"
-          autocomplete="current-password"
+          placeholder="Mot de passe"
         >
-
 
         <button
           id="deleteAccountButton"
           type="button"
-          class="danger"
         >
-          🗑️ Supprimer définitivement mon compte
+          Supprimer le compte
         </button>
 
       </div>
 
 
-      <hr>
+      <!-- DÉCONNEXION -->
 
+      <div class="settings-card">
 
-      <!-- DECONNEXION -->
+        <button
+          id="logoutButton"
+          type="button"
+          class="logout-button"
+        >
+          🚪 Se déconnecter
+        </button>
 
-      <button
-        id="logoutButton"
-        type="button"
-      >
-        🚪 Se déconnecter
-      </button>
+      </div>
 
     </section>
 
 
-
-    <!-- =====================================
+    <!-- ==============================
          ADMINISTRATION
-    ===================================== -->
+    =============================== -->
 
     <section
       id="adminPage"
-      class="hidden page"
+      class="page hidden"
     >
 
-      <h2>
-        👑 Administration
-      </h2>
-
-      <p>
-        Panneau réservé au créateur du jeu.
-      </p>
+      <h2>👑 Administration</h2>
 
 
       <!-- RECHERCHE -->
 
-      <h3>
-        🔎 Rechercher un joueur
-      </h3>
+      <div class="admin-card">
+
+        <h3>🔎 Rechercher un joueur</h3>
+
+        <input
+          id="adminPlayerSearch"
+          type="text"
+          placeholder="Pseudo du joueur"
+        >
+
+        <button
+          id="adminSearchButton"
+          type="button"
+        >
+          Rechercher
+        </button>
 
 
-      <input
-        id="adminPlayerSearch"
-        type="text"
-        placeholder="Pseudo du joueur"
-        autocomplete="off"
-      >
+        <div id="adminPlayerResult"></div>
+
+      </div>
 
 
-      <button
-        id="adminSearchButton"
-        type="button"
-      >
-        🔎 Rechercher
-      </button>
+      <!-- RÉCOMPENSE -->
+
+      <div class="admin-card">
+
+        <h3>🎁 Donner une récompense</h3>
 
 
-      <div id="adminPlayerResult"></div>
+        <label for="adminRewardType">
+          Type de récompense
+        </label>
+
+        <select id="adminRewardType">
+
+          <option value="coins">
+            🪙 Pièces
+          </option>
+
+          <option value="xp">
+            ✨ XP
+          </option>
+
+          <option value="level">
+            ⭐ Niveau
+          </option>
+
+          <option value="class">
+            🐺 Classe
+          </option>
+
+        </select>
 
 
-      <hr>
+        <input
+          id="adminAmount"
+          type="number"
+          min="1"
+          placeholder="Quantité"
+        >
 
 
-      <!-- RECOMPENSE -->
+        <select
+          id="adminClassSelect"
+          class="hidden"
+        >
 
-      <h3>
-        🎁 Donner une récompense
-      </h3>
+          <option value="">
+            Choisir une classe
+          </option>
 
+          <option value="wolf1">
+            🐺 Loup-Garou 1
+          </option>
 
-      <label for="adminRewardType">
-        Type de récompense :
-      </label>
+          <option value="wolf2">
+            🐺 Loup-Garou 2
+          </option>
 
+          <option value="wolf3">
+            🐺 Loup-Garou 3
+          </option>
 
-      <select id="adminRewardType">
+          <option value="wolf4">
+            🐺 Loup-Garou certifié
+          </option>
 
-        <option value="coins">
-          🪙 Pièces
-        </option>
+          <option value="seer1">
+            🔮 Voyante 1
+          </option>
 
-        <option value="xp">
-          ✨ XP
-        </option>
+          <option value="seer2">
+            🔮 Voyante 2
+          </option>
 
-        <option value="level">
-          ⭐ Niveau
-        </option>
+          <option value="seer3">
+            🔮 Voyante 3
+          </option>
 
-        <option value="class">
-          🐺 Classe
-        </option>
+          <option value="seer4">
+            🔮 Voyante certifiée
+          </option>
 
-      </select>
+          <option value="witch1">
+            🧪 Sorcière 1
+          </option>
 
+          <option value="witch2">
+            🧪 Sorcière 2
+          </option>
 
-      <input
-        id="adminAmount"
-        type="number"
-        min="1"
-        step="1"
-        placeholder="Quantité"
-      >
+          <option value="witch3">
+            🧪 Sorcière 3
+          </option>
 
+          <option value="witch4">
+            🧪 Sorcière certifiée
+          </option>
 
-      <select
-        id="adminClassSelect"
-        class="hidden"
-      >
+          <option value="hunter1">
+            🎯 Chasseur 1
+          </option>
 
-        <option value="wolf1">
-          🐺 Loup-Garou 1
-        </option>
+          <option value="hunter2">
+            🎯 Chasseur 2
+          </option>
 
-        <option value="wolf2">
-          🐺 Loup-Garou 2
-        </option>
+          <option value="hunter3">
+            🎯 Chasseur 3
+          </option>
 
-        <option value="wolf3">
-          🐺 Loup-Garou 3
-        </option>
+          <option value="hunter4">
+            🎯 Chasseur certifié
+          </option>
 
-        <option value="wolf4">
-          🐺 Loup-Garou certifié
-        </option>
-
-
-        <option value="seer1">
-          🔮 Voyante 1
-        </option>
-
-        <option value="seer2">
-          🔮 Voyante 2
-        </option>
-
-        <option value="seer3">
-          🔮 Voyante 3
-        </option>
-
-        <option value="seer4">
-          🔮 Voyante certifiée
-        </option>
+        </select>
 
 
-        <option value="witch1">
-          🧪 Sorcière 1
-        </option>
-
-        <option value="witch2">
-          🧪 Sorcière 2
-        </option>
-
-        <option value="witch3">
-          🧪 Sorcière 3
-        </option>
-
-        <option value="witch4">
-          🧪 Sorcière certifiée
-        </option>
+        <button
+          id="adminGiveButton"
+          type="button"
+          class="main-button"
+        >
+          🎁 Donner
+        </button>
 
 
-        <option value="hunter1">
-          🎯 Chasseur 1
-        </option>
+        <p
+          id="adminMessage"
+          class="message"
+        ></p>
 
-        <option value="hunter2">
-          🎯 Chasseur 2
-        </option>
-
-        <option value="hunter3">
-          🎯 Chasseur 3
-        </option>
-
-        <option value="hunter4">
-          🎯 Chasseur certifié
-        </option>
-
-
-        <option value="premium1">
-          💎 Premium 1
-        </option>
-
-        <option value="premium2">
-          💎 Premium 2
-        </option>
-
-        <option value="premium3">
-          💎 Premium 3
-        </option>
-
-        <option value="premium4">
-          💎 Premium certifié
-        </option>
-
-
-        <option value="admin1">
-          👑 Admin 1
-        </option>
-
-        <option value="admin2">
-          👑 Admin 2
-        </option>
-
-        <option value="admin3">
-          👑 Admin 3
-        </option>
-
-        <option value="admin4">
-          👑 Admin certifié
-        </option>
-
-      </select>
-
-
-      <button
-        id="adminGiveButton"
-        type="button"
-      >
-        🎁 Donner au joueur
-      </button>
-
-
-      <p id="adminMessage"></p>
+      </div>
 
     </section>
 
+  </section>
 
 
-    <!-- =====================================
-         RETOUR
-    ===================================== -->
-
-    <button
-      id="backButton"
-      type="button"
-      class="hidden"
-    >
-      ← Retour au menu
-    </button>
-
-
-  </main>
-
-
-
-  <!-- =====================================
-       MOT DE PASSE OUBLIÉ
-  ===================================== -->
-
-  <main
-    id="forgotScreen"
-    class="hidden"
-  >
-
-    <div class="auth-card">
-
-      <h1>
-        🔑 Mot de passe oublié
-      </h1>
-
-
-      <p>
-        Entre ton pseudo pour envoyer une demande
-        de réinitialisation.
-      </p>
-
-
-      <input
-        id="forgotPseudo"
-        type="text"
-        placeholder="Ton pseudo"
-        autocomplete="username"
-      >
-
-
-      <button
-        id="sendResetButton"
-        type="button"
-      >
-        📩 Envoyer la demande
-      </button>
-
-
-      <p id="forgotMessage"></p>
-
-
-      <button
-        id="backToLoginButton"
-        type="button"
-        class="link-button"
-      >
-        ← Retour à la connexion
-      </button>
-
-    </div>
-
-  </main>
-
-
-
-  <!-- =====================================
+  <!-- ==============================
        SCRIPTS
-  ===================================== -->
+  =============================== -->
 
   <script src="/socket.io/socket.io.js"></script>
 
   <script src="script.js"></script>
-
 
 </body>
 
