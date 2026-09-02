@@ -1,6 +1,7 @@
-/* =====================================
-   LOUP-GAROU V7 - SERVEUR
-===================================== */
+/* =========================================
+   LOUP-GAROU V7
+   SERVER.JS
+========================================= */
 
 const express = require("express");
 const http = require("http");
@@ -10,9 +11,9 @@ const bcrypt = require("bcryptjs");
 const { Server } = require("socket.io");
 
 
-/* =====================================
+/* =========================================
    CONFIGURATION
-===================================== */
+========================================= */
 
 const app = express();
 
@@ -22,17 +23,14 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-const ADMIN_PSEUDO = "creator2026";
+const ADMIN_PSEUDO =
+  (process.env.ADMIN_PSEUDO || "creator2026")
+    .toLowerCase();
 
 const DATA_FILE = path.join(
   __dirname,
   "data.json"
 );
-
-
-/* =====================================
-   MIDDLEWARE
-===================================== */
 
 app.use(express.json());
 
@@ -43,39 +41,37 @@ app.use(
 );
 
 
-/* =====================================
+/* =========================================
    BASE DE DONNÉES JSON
-===================================== */
+========================================= */
 
-function createDefaultData() {
+function defaultDatabase() {
   return {
-    users: []
+    users: [],
+    rooms: [],
+    friendships: [],
+    friendRequests: [],
+    messages: [],
+    notifications: [],
+    announcements: {
+      text: "Bienvenue dans Loup-Garou V7 🐺"
+    },
+    bloodMoonProgress: {}
   };
 }
 
-
-function loadData() {
-
+function loadDatabase() {
   try {
-
     if (!fs.existsSync(DATA_FILE)) {
-
-      const defaultData =
-        createDefaultData();
+      const db = defaultDatabase();
 
       fs.writeFileSync(
         DATA_FILE,
-        JSON.stringify(
-          defaultData,
-          null,
-          2
-        )
+        JSON.stringify(db, null, 2)
       );
 
-      return defaultData;
-
+      return db;
     }
-
 
     const content =
       fs.readFileSync(
@@ -83,481 +79,1074 @@ function loadData() {
         "utf8"
       );
 
-    const data =
+    const database =
       JSON.parse(content);
 
-    if (!data.users) {
-
-      data.users = [];
-
-    }
-
-    return data;
+    return {
+      ...defaultDatabase(),
+      ...database
+    };
 
   } catch (error) {
-
     console.error(
       "Erreur chargement data.json :",
       error
     );
 
-    return createDefaultData();
-
+    return defaultDatabase();
   }
-
 }
 
+let db = loadDatabase();
 
-let database = loadData();
-
-
-function saveData() {
-
+function saveDatabase() {
   try {
-
     fs.writeFileSync(
       DATA_FILE,
-      JSON.stringify(
-        database,
-        null,
-        2
-      )
+      JSON.stringify(db, null, 2)
     );
 
   } catch (error) {
-
     console.error(
-      "Erreur sauvegarde data.json :",
+      "Erreur sauvegarde :",
       error
     );
-
   }
-
 }
 
 
-/* =====================================
-   CLASSES
-===================================== */
-
-const CLASSES = [
-
-  {
-    id: "wolf1",
-    name: "Loup-Garou 1",
-    price: 1000,
-    chance: 10
-  },
-
-  {
-    id: "wolf2",
-    name: "Loup-Garou 2",
-    price: 1200,
-    chance: 20
-  },
-
-  {
-    id: "wolf3",
-    name: "Loup-Garou 3",
-    price: 1300,
-    chance: 35
-  },
-
-  {
-    id: "wolf4",
-    name: "Loup-Garou certifié",
-    price: 1500,
-    chance: 50
-  },
-
-
-  {
-    id: "seer1",
-    name: "Voyante 1",
-    price: 200,
-    chance: 10
-  },
-
-  {
-    id: "seer2",
-    name: "Voyante 2",
-    price: 250,
-    chance: 20
-  },
-
-  {
-    id: "seer3",
-    name: "Voyante 3",
-    price: 300,
-    chance: 30
-  },
-
-  {
-    id: "seer4",
-    name: "Voyante certifiée",
-    price: 400,
-    chance: 50
-  },
-
-
-  {
-    id: "witch1",
-    name: "Sorcière 1",
-    price: 350,
-    chance: 10
-  },
-
-  {
-    id: "witch2",
-    name: "Sorcière 2",
-    price: 450,
-    chance: 20
-  },
-
-  {
-    id: "witch3",
-    name: "Sorcière 3",
-    price: 500,
-    chance: 30
-  },
-
-  {
-    id: "witch4",
-    name: "Sorcière certifiée",
-    price: 600,
-    chance: 50
-  },
-
-
-  {
-    id: "hunter1",
-    name: "Chasseur 1",
-    price: 100,
-    chance: 10
-  },
-
-  {
-    id: "hunter2",
-    name: "Chasseur 2",
-    price: 150,
-    chance: 20
-  },
-
-  {
-    id: "hunter3",
-    name: "Chasseur 3",
-    price: 200,
-    chance: 30
-  },
-
-  {
-    id: "hunter4",
-    name: "Chasseur certifié",
-    price: 300,
-    chance: 50
-  }
-
-];
-
-
-/* =====================================
-   QUÊTES
-===================================== */
-
-const QUESTS = [
-
-  {
-    id: "play1",
-    title: "🌙 Première nuit",
-    description: "Jouer 1 partie.",
-    xp: 100,
-    coins: 100
-  },
-
-  {
-    id: "play3",
-    title: "🏘️ Habitant du village",
-    description: "Jouer 3 parties.",
-    xp: 150,
-    coins: 100
-  },
-
-  {
-    id: "play5",
-    title: "🎮 Joueur actif",
-    description: "Jouer 5 parties.",
-    xp: 250,
-    coins: 150
-  },
-
-  {
-    id: "play10",
-    title: "🔥 Villageois expérimenté",
-    description: "Jouer 10 parties.",
-    xp: 500,
-    coins: 200
-  },
-
-  {
-    id: "win1",
-    title: "🏆 Première victoire",
-    description: "Gagner 1 partie.",
-    xp: 500,
-    coins: 100
-  },
-
-  {
-    id: "win3",
-    title: "⭐ Trois victoires",
-    description: "Gagner 3 parties.",
-    xp: 600,
-    coins: 200
-  },
-
-  {
-    id: "win10",
-    title: "👑 Légende du village",
-    description: "Gagner 10 parties.",
-    xp: 1000,
-    coins: 500
-  }
-
-];
-
-
-/* =====================================
-   FONCTIONS UTILISATEURS
-===================================== */
+/* =========================================
+   OUTILS
+========================================= */
 
 function normalizePseudo(pseudo) {
-
   return String(
     pseudo || ""
   )
     .trim()
     .toLowerCase();
-
 }
 
+function cleanPseudo(pseudo) {
+  return String(
+    pseudo || ""
+  ).trim();
+}
 
 function findUser(pseudo) {
-
   const normalized =
     normalizePseudo(pseudo);
 
-  return database.users.find(
+  return db.users.find(
     (user) =>
       normalizePseudo(user.pseudo) ===
       normalized
   );
-
 }
-
 
 function publicUser(user) {
-
   if (!user) return null;
 
-  return {
+  const {
+    password,
+    ...safeUser
+  } = user;
 
-    pseudo: user.pseudo,
+  return safeUser;
+}
 
-    email: user.email,
+function generateCode() {
+  const characters =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
-    icon: user.icon || "🐺",
+  let code = "";
 
-    title:
-      user.title ||
-      "Nouveau Villageois",
+  for (
+    let index = 0;
+    index < 6;
+    index++
+  ) {
+    code +=
+      characters[
+        Math.floor(
+          Math.random() *
+          characters.length
+        )
+      ];
+  }
 
-    level:
-      Number(user.level || 1),
+  return code;
+}
 
-    xp:
-      Number(user.xp || 0),
+function createUniqueRoomCode() {
+  let code = generateCode();
 
-    coins:
-      Number(user.coins || 0),
+  while (
+    db.rooms.some(
+      (room) => room.code === code
+    )
+  ) {
+    code = generateCode();
+  }
 
-    trophies:
-      Number(user.trophies || 0),
+  return code;
+}
 
-    classes:
-      Array.isArray(user.classes)
-        ? user.classes
-        : [],
-
-    equippedClass:
-      user.equippedClass || ""
-
-  };
-
+function createId() {
+  return (
+    Date.now()
+      .toString(36) +
+    Math.random()
+      .toString(36)
+      .slice(2, 10)
+  );
 }
 
 
-function updateLevel(user) {
+/* =========================================
+   CLASSES
+========================================= */
 
-  user.xp =
-    Math.max(
+const CLASSES = [
+
+  {
+    id: "wolf1",
+    name: "Loup débutant",
+    price: 0,
+    chance: 10
+  },
+
+  {
+    id: "wolf2",
+    name: "Loup confirmé",
+    price: 300,
+    chance: 20
+  },
+
+  {
+    id: "seer1",
+    name: "Voyante",
+    price: 500,
+    chance: 25
+  },
+
+  {
+    id: "witch1",
+    name: "Sorcière",
+    price: 750,
+    chance: 30
+  },
+
+  {
+    id: "hunter1",
+    name: "Chasseur",
+    price: 1000,
+    chance: 35
+  },
+
+  {
+    id: "premium1",
+    name: "Premium 1",
+    price: 2000,
+    chance: 60
+  },
+
+  {
+    id: "premium2",
+    name: "Premium 2",
+    price: 2500,
+    chance: 70
+  },
+
+  {
+    id: "premium3",
+    name: "Premium 3",
+    price: 3000,
+    chance: 75
+  },
+
+  {
+    id: "premium_certified",
+    name: "Premium certifié",
+    price: 3500,
+    chance: 80
+  },
+
+  {
+    id: "admin1",
+    name: "Admin 1",
+    price: 5000,
+    chance: 85
+  },
+
+  {
+    id: "admin2",
+    name: "Admin 2",
+    price: 6000,
+    chance: 90
+  },
+
+  {
+    id: "admin3",
+    name: "Admin 3",
+    price: 7000,
+    chance: 95
+  },
+
+  {
+    id: "admin_certified",
+    name: "Admin certifié",
+    price: 10000,
+    chance: 99
+  }
+];
+
+
+/* =========================================
+   QUÊTES NORMALES
+========================================= */
+
+const QUESTS = [
+
+  {
+    id: "play_1",
+    title: "Premier hurlement",
+    description:
+      "Joue une partie.",
+    xp: 50,
+    coins: 25
+  },
+
+  {
+    id: "play_3",
+    title: "Villageois actif",
+    description:
+      "Participe à 3 parties.",
+    xp: 100,
+    coins: 50
+  },
+
+  {
+    id: "play_5",
+    title: "Nuit agitée",
+    description:
+      "Participe à 5 parties.",
+    xp: 150,
+    coins: 75
+  },
+
+  {
+    id: "play_10",
+    title: "Chasseur de loups",
+    description:
+      "Participe à 10 parties.",
+    xp: 300,
+    coins: 150
+  },
+
+  {
+    id: "win_1",
+    title: "Première victoire",
+    description:
+      "Gagne une partie.",
+    xp: 100,
+    coins: 100
+  },
+
+  {
+    id: "win_3",
+    title: "Héros du village",
+    description:
+      "Gagne 3 parties.",
+    xp: 250,
+    coins: 150
+  },
+
+  {
+    id: "win_10",
+    title: "Légende",
+    description:
+      "Gagne 10 parties.",
+    xp: 1000,
+    coins: 500
+  },
+
+  {
+    id: "social_1",
+    title: "Bienvenue au village",
+    description:
+      "Ajoute un ami.",
+    xp: 50,
+    coins: 25
+  },
+
+  {
+    id: "ranked_1",
+    title: "Premier combat classé",
+    description:
+      "Joue une partie classée.",
+    xp: 150,
+    coins: 75
+  },
+
+  {
+    id: "ranked_5",
+    title: "Combattant classé",
+    description:
+      "Joue 5 parties classées.",
+    xp: 500,
+    coins: 250
+  }
+];
+
+
+/* =========================================
+   QUÊTES LUNE DE SANG
+========================================= */
+
+const BLOOD_MOON_QUESTS = [
+
+  {
+    id: "bloodmoon_play",
+    title: "Sous la Lune de Sang",
+    description:
+      "Participe à une partie pendant l'événement.",
+    bloodMoonQuarters: 1
+  },
+
+  {
+    id: "bloodmoon_win",
+    title: "Victoire sanglante",
+    description:
+      "Gagne une partie pendant l'événement.",
+    bloodMoonQuarters: 1
+  },
+
+  {
+    id: "bloodmoon_ranked",
+    title: "Chasseur écarlate",
+    description:
+      "Joue une partie classée pendant l'événement.",
+    bloodMoonQuarters: 1
+  },
+
+  {
+    id: "bloodmoon_quest",
+    title: "Lune rouge",
+    description:
+      "Termine les objectifs de l'événement.",
+    bloodMoonQuarters: 1
+  }
+];
+
+
+/* =========================================
+   LUNE DE SANG
+   Vendredi 07:00 -> 20:00
+========================================= */
+
+function getBloodMoonStatus() {
+  const now = new Date();
+
+  const day = now.getDay();
+
+  const hour = now.getHours();
+
+  const active =
+    day === 5 &&
+    hour >= 7 &&
+    hour < 20;
+
+  let endsAt = null;
+
+  if (active) {
+    endsAt = new Date(now);
+
+    endsAt.setHours(
+      20,
       0,
-      Number(user.xp || 0)
+      0,
+      0
     );
+  }
+
+  return {
+    active,
+    endsAt:
+      endsAt
+        ? endsAt.getTime()
+        : null
+  };
+}
+
+
+/* =========================================
+   RANGS CLASSÉS
+========================================= */
+
+function getRank(trophies) {
+  const score =
+    Number(trophies || 0);
+
+  if (score >= 5000) {
+    return "Admin";
+  }
+
+  if (score >= 3000) {
+    return "Pro";
+  }
+
+  if (score >= 1800) {
+    return "Chasseur";
+  }
+
+  if (score >= 1000) {
+    return "Diamant";
+  }
+
+  if (score >= 500) {
+    return "Or";
+  }
+
+  if (score >= 200) {
+    return "Bronze";
+  }
+
+  return "Bois";
+}
+
+function getRankIcon(rank) {
+  const icons = {
+    Bois: "🪵",
+    Bronze: "🥉",
+    Or: "🥇",
+    Diamant: "💎",
+    Chasseur: "🏹",
+    Pro: "⭐",
+    Admin: "👑"
+  };
+
+  return icons[rank] || "🪵";
+}
+
+
+/* =========================================
+   NIVEAUX
+========================================= */
+
+function updateLevel(user) {
+  if (!user) return;
+
+  const xp =
+    Number(user.xp || 0);
 
   user.level =
     Math.max(
       1,
-      Math.floor(
-        user.xp / 500
-      ) + 1
+      Math.floor(xp / 500) + 1
     );
-
 }
 
 
-/* =====================================
-   ROUTE ACCUEIL
-===================================== */
+/* =========================================
+   NOTIFICATIONS
+========================================= */
 
-app.get(
-  "/",
-  (req, res) => {
+function addNotification(
+  pseudo,
+  notification
+) {
+  const user = findUser(pseudo);
 
-    res.sendFile(
-      path.join(
-        __dirname,
-        "public",
-        "index.html"
-      )
+  if (!user) return;
+
+  const item = {
+    id: createId(),
+
+    pseudo: user.pseudo,
+
+    title:
+      notification.title ||
+      "Notification",
+
+    message:
+      notification.message ||
+      "",
+
+    type:
+      notification.type ||
+      "info",
+
+    reward:
+      notification.reward ||
+      null,
+
+    claimed:
+      false,
+
+    createdAt:
+      Date.now()
+  };
+
+  db.notifications.push(item);
+
+  saveDatabase();
+
+  const socketId =
+    onlineUsers.get(
+      normalizePseudo(user.pseudo)
     );
 
+  if (socketId) {
+    io.to(socketId).emit(
+      "notification",
+      item
+    );
   }
-);
+
+  return item;
+}
 
 
-/* =====================================
-   INSCRIPTION
-===================================== */
+/* =========================================
+   RÉCOMPENSES
+========================================= */
+
+function applyReward(
+  user,
+  reward
+) {
+  if (!user) return null;
+
+  const coins =
+    Math.max(
+      0,
+      Number(reward.coins || 0)
+    );
+
+  const xp =
+    Math.max(
+      0,
+      Number(reward.xp || 0)
+    );
+
+  const trophies =
+    Number(reward.trophies || 0);
+
+  user.coins =
+    Number(user.coins || 0) +
+    coins;
+
+  user.xp =
+    Number(user.xp || 0) +
+    xp;
+
+  user.trophies =
+    Math.max(
+      0,
+      Number(user.trophies || 0) +
+      trophies
+    );
+
+  if (reward.classId) {
+    user.classes =
+      user.classes || [];
+
+    if (
+      !user.classes.includes(
+        reward.classId
+      )
+    ) {
+      user.classes.push(
+        reward.classId
+      );
+    }
+  }
+
+  updateLevel(user);
+
+  user.rank =
+    getRank(user.trophies);
+
+  return user;
+}
+
+
+/* =========================================
+   UTILISATEURS EN LIGNE
+========================================= */
+
+const onlineUsers = new Map();
+
+const socketUsers = new Map();
+
+
+function getOnlineUserInfo() {
+  return Array.from(
+    onlineUsers.keys()
+  );
+}
+
+function isUserOnline(pseudo) {
+  return onlineUsers.has(
+    normalizePseudo(pseudo)
+  );
+}
+
+
+/* =========================================
+   SALONS
+========================================= */
+
+function findRoom(code) {
+  return db.rooms.find(
+    (room) => room.code === code
+  );
+}
+
+function roomPublic(room) {
+  if (!room) return null;
+
+  return {
+    code: room.code,
+
+    host: room.host,
+
+    players: room.players,
+
+    ranked: Boolean(
+      room.ranked
+    ),
+
+    status:
+      room.status || "waiting",
+
+    maxPlayers: 8
+  };
+}
+
+function removeUserFromRooms(pseudo) {
+  const normalized =
+    normalizePseudo(pseudo);
+
+  db.rooms.forEach(
+    (room) => {
+      room.players =
+        room.players.filter(
+          (player) =>
+            normalizePseudo(
+              player.pseudo
+            ) !== normalized
+        );
+    }
+  );
+
+  db.rooms =
+    db.rooms.filter(
+      (room) =>
+        room.players.length > 0
+    );
+}
+
+function addBotsToRoom(room) {
+  let number = 1;
+
+  while (
+    room.players.length < 8
+  ) {
+    let botPseudo =
+      `Bot_${number}`;
+
+    while (
+      room.players.some(
+        (player) =>
+          player.pseudo === botPseudo
+      )
+    ) {
+      number++;
+      botPseudo =
+        `Bot_${number}`;
+    }
+
+    room.players.push({
+      pseudo: botPseudo,
+      isBot: true,
+      socketId: null
+    });
+
+    number++;
+  }
+}
+
+
+/* =========================================
+   VRAIE PARTIE LOUP-GAROU
+========================================= */
+
+function shuffle(array) {
+  const copy =
+    [...array];
+
+  for (
+    let index =
+      copy.length - 1;
+    index > 0;
+    index--
+  ) {
+    const randomIndex =
+      Math.floor(
+        Math.random() *
+        (index + 1)
+      );
+
+    [
+      copy[index],
+      copy[randomIndex]
+    ] =
+      [
+        copy[randomIndex],
+        copy[index]
+      ];
+  }
+
+  return copy;
+}
+
+function createGame(room) {
+  const players =
+    shuffle(room.players);
+
+  const roles = [
+    "Loup-Garou",
+    "Loup-Garou",
+    "Voyante",
+    "Sorcière",
+    "Chasseur",
+    "Villageois",
+    "Villageois",
+    "Villageois"
+  ];
+
+  const gamePlayers =
+    players.map(
+      (player, index) => ({
+        pseudo: player.pseudo,
+
+        isBot:
+          Boolean(
+            player.isBot
+          ),
+
+        alive: true,
+
+        role:
+          roles[index] ||
+          "Villageois"
+      })
+    );
+
+  return {
+    id: createId(),
+
+    roomCode:
+      room.code,
+
+    ranked:
+      Boolean(
+        room.ranked
+      ),
+
+    phase: "night",
+
+    day: 1,
+
+    players:
+      gamePlayers,
+
+    nightVotes: {},
+
+    dayVotes: {},
+
+    winner: null,
+
+    createdAt:
+      Date.now()
+  };
+}
+
+function getGameForRoom(room) {
+  return room.game || null;
+}
+
+function getAlivePlayers(game) {
+  return game.players.filter(
+    (player) => player.alive
+  );
+}
+
+function checkGameWinner(game) {
+  const alive =
+    getAlivePlayers(game);
+
+  const wolves =
+    alive.filter(
+      (player) =>
+        player.role ===
+        "Loup-Garou"
+    );
+
+  const villagers =
+    alive.filter(
+      (player) =>
+        player.role !==
+        "Loup-Garou"
+    );
+
+  if (wolves.length === 0) {
+    game.winner =
+      "Villageois";
+
+    return true;
+  }
+
+  if (
+    wolves.length >=
+    villagers.length
+  ) {
+    game.winner =
+      "Loups-Garous";
+
+    return true;
+  }
+
+  return false;
+}
+
+function finishGame(room) {
+  const game = room.game;
+
+  if (!game) return;
+
+  game.phase = "finished";
+
+  const bloodMoon =
+    getBloodMoonStatus();
+
+  game.players.forEach(
+    (player) => {
+      if (player.isBot) return;
+
+      const user =
+        findUser(player.pseudo);
+
+      if (!user) return;
+
+      let xp = 50;
+      let coins = 25;
+      let trophies = 0;
+
+      const isWolf =
+        player.role ===
+        "Loup-Garou";
+
+      const won =
+        (
+          game.winner ===
+          "Loups-Garous" &&
+          isWolf
+        ) ||
+        (
+          game.winner ===
+          "Villageois" &&
+          !isWolf
+        );
+
+      if (won) {
+        xp += 100;
+        coins += 50;
+
+        trophies =
+          game.ranked
+            ? 30
+            : 0;
+
+      } else {
+        trophies =
+          game.ranked
+            ? -10
+            : 0;
+      }
+
+      if (bloodMoon.active) {
+        xp *= 2;
+        coins *= 2;
+        trophies *= 2;
+      }
+
+      applyReward(
+        user,
+        {
+          xp,
+          coins,
+          trophies
+        }
+      );
+
+      user.gamesPlayed =
+        Number(
+          user.gamesPlayed || 0
+        ) + 1;
+
+      if (won) {
+        user.gamesWon =
+          Number(
+            user.gamesWon || 0
+          ) + 1;
+      }
+
+      const socketId =
+        onlineUsers.get(
+          normalizePseudo(
+            user.pseudo
+          )
+        );
+
+      if (socketId) {
+        io.to(socketId).emit(
+          "profileUpdated",
+          publicUser(user)
+        );
+      }
+    }
+  );
+
+  saveDatabase();
+
+  io.to(room.code).emit(
+    "gameFinished",
+    {
+      winner:
+        game.winner,
+
+      players:
+        game.players
+    }
+  );
+}
+
+
+/* =========================================
+   API : INSCRIPTION
+========================================= */
 
 app.post(
   "/api/register",
   async (req, res) => {
-
     try {
+      const {
+        pseudo,
+        email,
+        password
+      } = req.body;
 
-      const pseudo =
-        String(
-          req.body.pseudo || ""
-        ).trim();
-
-      const email =
-        String(
-          req.body.email || ""
-        )
-          .trim()
-          .toLowerCase();
-
-      const password =
-        String(
-          req.body.password || ""
-        );
-
+      const clean =
+        cleanPseudo(pseudo);
 
       if (
-        !pseudo ||
+        clean.length < 3
+      ) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Le pseudo doit contenir au moins 3 caractères."
+          });
+      }
+
+      if (
         !email ||
-        !password
+        !String(email).includes("@")
       ) {
-
-        return res.status(400).json({
-          message:
-            "Tous les champs sont obligatoires."
-        });
-
+        return res
+          .status(400)
+          .json({
+            message:
+              "Adresse e-mail invalide."
+          });
       }
-
 
       if (
-        pseudo.length < 3 ||
-        pseudo.length > 20
+        !password ||
+        String(password).length < 4
       ) {
-
-        return res.status(400).json({
-          message:
-            "Le pseudo doit contenir entre 3 et 20 caractères."
-        });
-
+        return res
+          .status(400)
+          .json({
+            message:
+              "Le mot de passe doit contenir au moins 4 caractères."
+          });
       }
-
 
       if (
-        password.length < 4
+        findUser(clean)
       ) {
-
-        return res.status(400).json({
-          message:
-            "Le mot de passe doit contenir au moins 4 caractères."
-        });
-
+        return res
+          .status(400)
+          .json({
+            message:
+              "Ce pseudo existe déjà."
+          });
       }
 
-
-      if (
-        findUser(pseudo)
-      ) {
-
-        return res.status(409).json({
-          message:
-            "Ce pseudo existe déjà."
-        });
-
-      }
-
-
-      const existingEmail =
-        database.users.find(
+      const emailExists =
+        db.users.some(
           (user) =>
             String(
-              user.email || ""
-            )
-              .toLowerCase() ===
-            email
+              user.email
+            ).toLowerCase() ===
+            String(
+              email
+            ).toLowerCase()
         );
 
-
-      if (existingEmail) {
-
-        return res.status(409).json({
-          message:
-            "Cet email est déjà utilisé."
-        });
-
+      if (emailExists) {
+        return res
+          .status(400)
+          .json({
+            message:
+              "Cette adresse e-mail est déjà utilisée."
+          });
       }
 
-
-      const passwordHash =
+      const hashedPassword =
         await bcrypt.hash(
           password,
           10
         );
 
-
       const user = {
+        id: createId(),
 
-        id:
-          Date.now().toString() +
-          Math.random()
-            .toString(36)
-            .slice(2),
+        pseudo: clean,
 
-        pseudo,
+        email:
+          String(email)
+            .trim()
+            .toLowerCase(),
 
-        email,
-
-        passwordHash,
+        password:
+          hashedPassword,
 
         icon: "🐺",
 
         title:
+          "Nouveau Villageois",
+
+        titles: [
+          "Nouveau Villageois"
+        ],
+
+        equippedTitle:
           "Nouveau Villageois",
 
         level: 1,
@@ -568,178 +1157,155 @@ app.post(
 
         trophies: 0,
 
-        classes: [],
+        rank: "Bois",
 
-        equippedClass: "",
+        classes: [
+          "wolf1"
+        ],
+
+        equippedClass:
+          "wolf1",
+
+        gamesPlayed: 0,
+
+        gamesWon: 0,
 
         createdAt:
-          new Date().toISOString()
-
+          Date.now()
       };
 
+      db.users.push(user);
 
-      database.users.push(user);
+      saveDatabase();
 
-      saveData();
+      addNotification(
+        user.pseudo,
+        {
+          title:
+            "Bienvenue !",
 
+          message:
+            "Vous avez reçu 50 pièces 🐺.",
 
-      return res.status(201).json({
+          type:
+            "reward"
+        }
+      );
 
+      return res.json({
         message:
-          "Compte créé !",
-
+          "Compte créé avec succès.",
         user:
           publicUser(user)
-
       });
 
     } catch (error) {
+      console.error(error);
 
-      console.error(
-        "Erreur inscription :",
-        error
-      );
-
-      return res.status(500).json({
-        message:
-          "Erreur serveur."
-      });
-
+      return res
+        .status(500)
+        .json({
+          message:
+            "Erreur serveur."
+        });
     }
-
   }
 );
 
 
-/* =====================================
-   CONNEXION
-===================================== */
+/* =========================================
+   API : CONNEXION
+========================================= */
 
 app.post(
   "/api/login",
   async (req, res) => {
-
     try {
-
-      const pseudo =
-        String(
-          req.body.pseudo || ""
-        ).trim();
-
-      const password =
-        String(
-          req.body.password || ""
-        );
-
+      const {
+        pseudo,
+        password
+      } = req.body;
 
       const user =
         findUser(pseudo);
 
-
       if (!user) {
-
-        return res.status(401).json({
-          message:
-            "Pseudo ou mot de passe incorrect."
-        });
-
+        return res
+          .status(401)
+          .json({
+            message:
+              "Pseudo ou mot de passe incorrect."
+          });
       }
-
-
-      const passwordHash =
-        user.passwordHash ||
-        user.password;
-
 
       const valid =
         await bcrypt.compare(
-          password,
-          passwordHash
+          password || "",
+          user.password
         );
 
-
       if (!valid) {
-
-        return res.status(401).json({
-          message:
-            "Pseudo ou mot de passe incorrect."
-        });
-
+        return res
+          .status(401)
+          .json({
+            message:
+              "Pseudo ou mot de passe incorrect."
+          });
       }
 
+      updateLevel(user);
+
+      user.rank =
+        getRank(
+          user.trophies
+        );
+
+      saveDatabase();
 
       return res.json({
-
         message:
           "Connexion réussie.",
-
         user:
           publicUser(user)
-
       });
 
     } catch (error) {
+      console.error(error);
 
-      console.error(
-        "Erreur connexion :",
-        error
-      );
-
-      return res.status(500).json({
-        message:
-          "Erreur serveur."
-      });
-
+      return res
+        .status(500)
+        .json({
+          message:
+            "Erreur serveur."
+        });
     }
-
   }
 );
 
 
-/* =====================================
-   LISTE DES CLASSES
-===================================== */
+/* =========================================
+   API : CLASSES
+========================================= */
 
 app.get(
   "/api/classes",
   (req, res) => {
-
     res.json({
       classes: CLASSES
     });
-
   }
 );
-
-
-/* =====================================
-   ACHETER UNE CLASSE
-===================================== */
 
 app.post(
   "/api/classes/buy",
   (req, res) => {
-
-    const pseudo =
-      req.body.pseudo;
-
-    const classId =
-      req.body.classId;
-
+    const {
+      pseudo,
+      classId
+    } = req.body;
 
     const user =
       findUser(pseudo);
-
-
-    if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Utilisateur introuvable."
-      });
-
-    }
-
 
     const classe =
       CLASSES.find(
@@ -747,1174 +1313,2436 @@ app.post(
           item.id === classId
       );
 
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
+    }
 
     if (!classe) {
-
-      return res.status(404).json({
-        message:
-          "Classe introuvable."
-      });
-
+      return res
+        .status(404)
+        .json({
+          message:
+            "Classe introuvable."
+        });
     }
 
-
-    if (
-      !Array.isArray(
-        user.classes
-      )
-    ) {
-
-      user.classes = [];
-
-    }
-
+    user.classes =
+      user.classes || [];
 
     if (
       user.classes.includes(
-        classId
+        classe.id
       )
     ) {
-
-      return res.status(400).json({
-        message:
-          "Tu possèdes déjà cette classe."
-      });
-
+      return res
+        .status(400)
+        .json({
+          message:
+            "Tu possèdes déjà cette classe."
+        });
     }
-
 
     if (
       Number(user.coins || 0) <
       classe.price
     ) {
-
-      return res.status(400).json({
-        message:
-          "Tu n'as pas assez de pièces."
-      });
-
+      return res
+        .status(400)
+        .json({
+          message:
+            "Tu n'as pas assez de pièces."
+        });
     }
-
 
     user.coins -=
       classe.price;
 
-
     user.classes.push(
-      classId
+      classe.id
     );
 
+    saveDatabase();
 
-    saveData();
-
-
-    return res.json({
-
+    res.json({
       message:
         "Classe achetée !",
-
       user:
         publicUser(user)
-
     });
-
   }
 );
-
-
-/* =====================================
-   ÉQUIPER UNE CLASSE
-===================================== */
 
 app.post(
   "/api/classes/equip",
   (req, res) => {
-
-    const pseudo =
-      req.body.pseudo;
-
-    const classId =
-      req.body.classId;
-
+    const {
+      pseudo,
+      classId
+    } = req.body;
 
     const user =
       findUser(pseudo);
 
-
     if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Utilisateur introuvable."
-      });
-
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
     }
-
 
     if (
-      !Array.isArray(
-        user.classes
-      ) ||
-      !user.classes.includes(
-        classId
-      )
+      !(user.classes || [])
+        .includes(classId)
     ) {
-
-      return res.status(400).json({
-        message:
-          "Tu ne possèdes pas cette classe."
-      });
-
+      return res
+        .status(400)
+        .json({
+          message:
+            "Tu ne possèdes pas cette classe."
+        });
     }
-
-
-    const exists =
-      CLASSES.some(
-        (item) =>
-          item.id === classId
-      );
-
-
-    if (!exists) {
-
-      return res.status(404).json({
-        message:
-          "Classe introuvable."
-      });
-
-    }
-
 
     user.equippedClass =
       classId;
 
+    saveDatabase();
 
-    saveData();
-
-
-    return res.json({
-
+    res.json({
       message:
         "Classe équipée !",
-
       user:
         publicUser(user)
-
     });
-
   }
 );
 
 
-/* =====================================
-   QUÊTES
-===================================== */
+/* =========================================
+   API : QUÊTES
+========================================= */
 
 app.get(
   "/api/quests",
   (req, res) => {
-
     res.json({
       quests: QUESTS
     });
-
   }
 );
-
-
-/* =====================================
-   RECHERCHER UN UTILISATEUR
-===================================== */
 
 app.get(
-  "/api/users/:pseudo",
+  "/api/blood-moon",
   (req, res) => {
+    res.json({
+      event:
+        getBloodMoonStatus(),
 
-    const user =
-      findUser(
-        req.params.pseudo
-      );
-
-
-    if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Joueur introuvable."
-      });
-
-    }
-
-
-    return res.json({
-
-      user:
-        publicUser(user)
-
+      quests:
+        BLOOD_MOON_QUESTS
     });
-
   }
 );
 
 
-/* =====================================
-   CLASSEMENT
-===================================== */
+/* =========================================
+   API : CLASSEMENT
+========================================= */
 
 app.get(
   "/api/ranking",
   (req, res) => {
-
     const users =
-      database.users
+      db.users
         .map(publicUser)
         .sort(
-          (a, b) => {
-
-            if (
-              b.trophies !==
-              a.trophies
-            ) {
-
-              return (
-                b.trophies -
-                a.trophies
-              );
-
-            }
-
-
-            if (
-              b.level !==
-              a.level
-            ) {
-
-              return (
-                b.level -
-                a.level
-              );
-
-            }
-
-
-            return (
-              b.xp -
-              a.xp
-            );
-
-          }
+          (first, second) =>
+            Number(
+              second.trophies || 0
+            ) -
+            Number(
+              first.trophies || 0
+            )
         );
-
 
     res.json({
       users
     });
-
   }
 );
 
 
-/* =====================================
-   ADMIN - VÉRIFICATION
-===================================== */
+/* =========================================
+   API : RECHERCHE JOUEUR
+========================================= */
 
-function isAdmin(pseudo) {
+app.get(
+  "/api/users/:pseudo",
+  (req, res) => {
+    const user =
+      findUser(
+        req.params.pseudo
+      );
 
-  return (
-    normalizePseudo(pseudo) ===
-    normalizePseudo(ADMIN_PSEUDO)
-  );
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Joueur introuvable."
+        });
+    }
 
-}
+    res.json({
+      user:
+        publicUser(user)
+    });
+  }
+);
 
 
-/* =====================================
-   ADMIN - RECHERCHER UTILISATEUR
-===================================== */
+/* =========================================
+   API : NOTIFICATIONS
+========================================= */
+
+app.get(
+  "/api/notifications/:pseudo",
+  (req, res) => {
+    const user =
+      findUser(
+        req.params.pseudo
+      );
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
+    }
+
+    const notifications =
+      db.notifications
+        .filter(
+          (notification) =>
+            normalizePseudo(
+              notification.pseudo
+            ) ===
+            normalizePseudo(
+              user.pseudo
+            )
+        )
+        .sort(
+          (a, b) =>
+            b.createdAt -
+            a.createdAt
+        );
+
+    res.json({
+      notifications
+    });
+  }
+);
+
+app.post(
+  "/api/notifications/claim",
+  (req, res) => {
+    const {
+      pseudo,
+      notificationId
+    } = req.body;
+
+    const user =
+      findUser(pseudo);
+
+    const notification =
+      db.notifications.find(
+        (item) =>
+          item.id ===
+          notificationId &&
+          normalizePseudo(
+            item.pseudo
+          ) ===
+          normalizePseudo(pseudo)
+      );
+
+    if (
+      !user ||
+      !notification
+    ) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Notification introuvable."
+        });
+    }
+
+    if (notification.claimed) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Récompense déjà récupérée."
+        });
+    }
+
+    notification.claimed = true;
+
+    if (notification.reward) {
+      applyReward(
+        user,
+        notification.reward
+      );
+    }
+
+    saveDatabase();
+
+    res.json({
+      message:
+        "Récompense récupérée !",
+
+      user:
+        publicUser(user)
+    });
+  }
+);
+
+
+/* =========================================
+   API : ANNONCE
+========================================= */
+
+app.get(
+  "/api/announcement",
+  (req, res) => {
+    res.json(
+      db.announcements
+    );
+  }
+);
+
+app.post(
+  "/api/admin/announcement",
+  (req, res) => {
+    const {
+      adminPseudo,
+      text
+    } = req.body;
+
+    if (
+      normalizePseudo(
+        adminPseudo
+      ) !== ADMIN_PSEUDO
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Accès refusé."
+        });
+    }
+
+    db.announcements.text =
+      String(text || "")
+        .trim()
+        .slice(0, 2000);
+
+    saveDatabase();
+
+    io.emit(
+      "announcementUpdated",
+      db.announcements
+    );
+
+    res.json({
+      message:
+        "Annonce enregistrée."
+    });
+  }
+);
+
+
+/* =========================================
+   API : ADMIN
+========================================= */
 
 app.get(
   "/api/admin/users/:pseudo",
   (req, res) => {
-
     const adminPseudo =
       req.query.adminPseudo;
 
-
-    if (!isAdmin(adminPseudo)) {
-
-      return res.status(403).json({
-        message:
-          "Accès refusé."
-      });
-
+    if (
+      normalizePseudo(
+        adminPseudo
+      ) !== ADMIN_PSEUDO
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Accès refusé."
+        });
     }
-
 
     const user =
       findUser(
         req.params.pseudo
       );
 
-
     if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Joueur introuvable."
-      });
-
+      return res
+        .status(404)
+        .json({
+          message:
+            "Joueur introuvable."
+        });
     }
 
-
-    return res.json({
-
+    res.json({
       user:
         publicUser(user)
-
     });
-
   }
 );
-
-
-/* =====================================
-   ADMIN - DONNER RÉCOMPENSE
-===================================== */
 
 app.post(
   "/api/admin/reward",
   (req, res) => {
-
     const {
-
       adminPseudo,
-
       targetPseudo,
-
       coins,
-
       xp,
-
       trophies,
-
       classId
-
     } = req.body;
 
-
-    if (!isAdmin(adminPseudo)) {
-
-      return res.status(403).json({
-        message:
-          "Accès refusé."
-      });
-
+    if (
+      normalizePseudo(
+        adminPseudo
+      ) !== ADMIN_PSEUDO
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Accès refusé."
+        });
     }
-
 
     const user =
-      findUser(
-        targetPseudo
-      );
-
+      findUser(targetPseudo);
 
     if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Joueur introuvable."
-      });
-
+      return res
+        .status(404)
+        .json({
+          message:
+            "Joueur introuvable."
+        });
     }
 
-
-    const safeCoins =
-      Math.max(
-        0,
-        Number(coins || 0)
-      );
-
-
-    const safeXp =
-      Math.max(
-        0,
-        Number(xp || 0)
-      );
-
-
-    const safeTrophies =
-      Math.max(
-        0,
-        Number(trophies || 0)
-      );
-
-
-    user.coins =
-      Number(user.coins || 0) +
-      safeCoins;
-
-
-    user.xp =
-      Number(user.xp || 0) +
-      safeXp;
-
-
-    user.trophies =
-      Number(user.trophies || 0) +
-      safeTrophies;
-
-
-    if (classId) {
-
-      const classe =
-        CLASSES.find(
-          (item) =>
-            item.id === classId
-        );
-
-
-      if (!classe) {
-
-        return res.status(400).json({
+    if (
+      classId &&
+      !CLASSES.some(
+        (classe) =>
+          classe.id === classId
+      )
+    ) {
+      return res
+        .status(400)
+        .json({
           message:
             "Classe invalide."
         });
-
-      }
-
-
-      if (
-        !Array.isArray(
-          user.classes
-        )
-      ) {
-
-        user.classes = [];
-
-      }
-
-
-      if (
-        !user.classes.includes(
-          classId
-        )
-      ) {
-
-        user.classes.push(
-          classId
-        );
-
-      }
-
     }
 
+    const reward = {
+      coins:
+        Math.max(
+          0,
+          Number(coins || 0)
+        ),
 
-    updateLevel(user);
+      xp:
+        Math.max(
+          0,
+          Number(xp || 0)
+        ),
 
-    saveData();
+      trophies:
+        Math.max(
+          0,
+          Number(trophies || 0)
+        ),
 
+      classId:
+        classId || ""
+    };
 
-    return res.json({
+    /*
+      La récompense est appliquée
+      immédiatement.
+    */
 
+    applyReward(
+      user,
+      reward
+    );
+
+    saveDatabase();
+
+    addNotification(
+      user.pseudo,
+      {
+        title:
+          "🎁 Récompense du créateur",
+
+        message:
+          "Le créateur du jeu vous a offert une récompense.",
+
+        type:
+          "creator",
+
+        reward: null
+      }
+    );
+
+    const socketId =
+      onlineUsers.get(
+        normalizePseudo(
+          user.pseudo
+        )
+      );
+
+    if (socketId) {
+      io.to(socketId).emit(
+        "profileUpdated",
+        publicUser(user)
+      );
+    }
+
+    res.json({
       message:
         "Récompense envoyée !",
 
       user:
         publicUser(user)
-
     });
-
   }
 );
 
 
-/* =====================================
-   CHANGER EMAIL
-===================================== */
+/* =========================================
+   ADMIN : RÉCOMPENSER TOUS LES JOUEURS
+========================================= */
 
 app.post(
-  "/api/account/email",
-  async (req, res) => {
-
-    try {
-
-      const pseudo =
-        req.body.pseudo;
-
-      const email =
-        String(
-          req.body.email || ""
-        )
-          .trim()
-          .toLowerCase();
-
-      const password =
-        String(
-          req.body.password || ""
-        );
-
-
-      const user =
-        findUser(pseudo);
-
-
-      if (!user) {
-
-        return res.status(404).json({
-          message:
-            "Utilisateur introuvable."
-        });
-
-      }
-
-
-      if (!email) {
-
-        return res.status(400).json({
-          message:
-            "Entre un email valide."
-        });
-
-      }
-
-
-      const passwordHash =
-        user.passwordHash ||
-        user.password;
-
-
-      const valid =
-        await bcrypt.compare(
-          password,
-          passwordHash
-        );
-
-
-      if (!valid) {
-
-        return res.status(401).json({
-          message:
-            "Mot de passe incorrect."
-        });
-
-      }
-
-
-      const existing =
-        database.users.find(
-          (otherUser) =>
-            otherUser !== user &&
-            String(
-              otherUser.email || ""
-            )
-              .toLowerCase() ===
-            email
-        );
-
-
-      if (existing) {
-
-        return res.status(409).json({
-          message:
-            "Cet email est déjà utilisé."
-        });
-
-      }
-
-
-      user.email =
-        email;
-
-
-      saveData();
-
-
-      return res.json({
-
-        message:
-          "Email modifié !",
-
-        user:
-          publicUser(user)
-
-      });
-
-    } catch (error) {
-
-      console.error(error);
-
-      return res.status(500).json({
-        message:
-          "Erreur serveur."
-      });
-
-    }
-
-  }
-);
-
-
-/* =====================================
-   SUPPRIMER COMPTE
-===================================== */
-
-app.post(
-  "/api/account/delete",
-  async (req, res) => {
-
-    try {
-
-      const pseudo =
-        req.body.pseudo;
-
-      const password =
-        String(
-          req.body.password || ""
-        );
-
-
-      const user =
-        findUser(pseudo);
-
-
-      if (!user) {
-
-        return res.status(404).json({
-          message:
-            "Utilisateur introuvable."
-        });
-
-      }
-
-
-      const passwordHash =
-        user.passwordHash ||
-        user.password;
-
-
-      const valid =
-        await bcrypt.compare(
-          password,
-          passwordHash
-        );
-
-
-      if (!valid) {
-
-        return res.status(401).json({
-          message:
-            "Mot de passe incorrect."
-        });
-
-      }
-
-
-      database.users =
-        database.users.filter(
-          (item) =>
-            item !== user
-        );
-
-
-      saveData();
-
-
-      return res.json({
-        message:
-          "Compte supprimé."
-      });
-
-    } catch (error) {
-
-      console.error(error);
-
-      return res.status(500).json({
-        message:
-          "Erreur serveur."
-      });
-
-    }
-
-  }
-);
-
-
-/* =====================================
-   MOT DE PASSE OUBLIÉ
-===================================== */
-
-app.post(
-  "/api/password/forgot",
+  "/api/admin/reward-all",
   (req, res) => {
+    const {
+      adminPseudo,
+      coins,
+      xp,
+      trophies,
+      classId,
+      onlineOnly
+    } = req.body;
 
+    if (
+      normalizePseudo(
+        adminPseudo
+      ) !== ADMIN_PSEUDO
+    ) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Accès refusé."
+        });
+    }
+
+    if (
+      classId &&
+      !CLASSES.some(
+        (classe) =>
+          classe.id === classId
+      )
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Classe invalide."
+        });
+    }
+
+    const reward = {
+      coins:
+        Math.max(
+          0,
+          Number(coins || 0)
+        ),
+
+      xp:
+        Math.max(
+          0,
+          Number(xp || 0)
+        ),
+
+      trophies:
+        Math.max(
+          0,
+          Number(trophies || 0)
+        ),
+
+      classId:
+        classId || ""
+    };
+
+    let count = 0;
+
+    db.users.forEach(
+      (user) => {
+        if (
+          onlineOnly &&
+          !isUserOnline(
+            user.pseudo
+          )
+        ) {
+          return;
+        }
+
+        applyReward(
+          user,
+          reward
+        );
+
+        addNotification(
+          user.pseudo,
+          {
+            title:
+              "🎁 Récompense du créateur",
+
+            message:
+              "Le créateur du jeu vous a offert une récompense.",
+
+            type:
+              "creator"
+          }
+        );
+
+        const socketId =
+          onlineUsers.get(
+            normalizePseudo(
+              user.pseudo
+            )
+          );
+
+        if (socketId) {
+          io.to(socketId).emit(
+            "profileUpdated",
+            publicUser(user)
+          );
+        }
+
+        count++;
+      }
+    );
+
+    saveDatabase();
+
+    res.json({
+      message:
+        `Récompense envoyée à ${count} joueur(s).`
+    });
+  }
+);
+
+
+/* =========================================
+   API : AMIS
+========================================= */
+
+app.get(
+  "/api/friends/:pseudo",
+  (req, res) => {
     const pseudo =
-      req.body.pseudo;
+      req.params.pseudo;
 
+    const friends =
+      db.friendships
+        .filter(
+          (friendship) =>
+            normalizePseudo(
+              friendship.user1
+            ) ===
+              normalizePseudo(pseudo) ||
+            normalizePseudo(
+              friendship.user2
+            ) ===
+              normalizePseudo(pseudo)
+        )
+        .map(
+          (friendship) => {
+            const friendPseudo =
+              normalizePseudo(
+                friendship.user1
+              ) ===
+              normalizePseudo(pseudo)
+                ? friendship.user2
+                : friendship.user1;
+
+            const friend =
+              findUser(
+                friendPseudo
+              );
+
+            const room =
+              db.rooms.find(
+                (item) =>
+                  item.players.some(
+                    (player) =>
+                      normalizePseudo(
+                        player.pseudo
+                      ) ===
+                      normalizePseudo(
+                        friendPseudo
+                      )
+                  )
+              );
+
+            return {
+              user:
+                publicUser(friend),
+
+              online:
+                isUserOnline(
+                  friendPseudo
+                ),
+
+              inRoom:
+                Boolean(room),
+
+              roomCode:
+                room
+                  ? room.code
+                  : null
+            };
+          }
+        );
+
+    res.json({
+      friends
+    });
+  }
+);
+
+app.post(
+  "/api/friends/request",
+  (req, res) => {
+    const {
+      fromPseudo,
+      toPseudo
+    } = req.body;
+
+    const from =
+      findUser(fromPseudo);
+
+    const to =
+      findUser(toPseudo);
+
+    if (
+      !from ||
+      !to
+    ) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
+    }
+
+    if (
+      normalizePseudo(
+        from.pseudo
+      ) ===
+      normalizePseudo(
+        to.pseudo
+      )
+    ) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Tu ne peux pas t'ajouter toi-même."
+        });
+    }
+
+    const exists =
+      db.friendships.some(
+        (item) =>
+          (
+            normalizePseudo(
+              item.user1
+            ) ===
+            normalizePseudo(from.pseudo) &&
+            normalizePseudo(
+              item.user2
+            ) ===
+            normalizePseudo(to.pseudo)
+          ) ||
+          (
+            normalizePseudo(
+              item.user2
+            ) ===
+            normalizePseudo(from.pseudo) &&
+            normalizePseudo(
+              item.user1
+            ) ===
+            normalizePseudo(to.pseudo)
+          )
+      );
+
+    if (exists) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Vous êtes déjà amis."
+        });
+    }
+
+    const requestExists =
+      db.friendRequests.some(
+        (item) =>
+          normalizePseudo(
+            item.fromPseudo
+          ) ===
+          normalizePseudo(
+            from.pseudo
+          ) &&
+          normalizePseudo(
+            item.toPseudo
+          ) ===
+          normalizePseudo(
+            to.pseudo
+          )
+      );
+
+    if (requestExists) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Demande déjà envoyée."
+        });
+    }
+
+    const request = {
+      id: createId(),
+
+      fromPseudo:
+        from.pseudo,
+
+      toPseudo:
+        to.pseudo,
+
+      type: "friend",
+
+      createdAt:
+        Date.now()
+    };
+
+    db.friendRequests.push(
+      request
+    );
+
+    saveDatabase();
+
+    addNotification(
+      to.pseudo,
+      {
+        title:
+          "👥 Demande d'ami",
+
+        message:
+          `${from.pseudo} souhaite devenir votre ami.`,
+
+        type:
+          "friendRequest"
+      }
+    );
+
+    res.json({
+      message:
+        "Demande envoyée."
+    });
+  }
+);
+
+app.get(
+  "/api/friends/requests/:pseudo",
+  (req, res) => {
+    const requests =
+      db.friendRequests.filter(
+        (request) =>
+          normalizePseudo(
+            request.toPseudo
+          ) ===
+          normalizePseudo(
+            req.params.pseudo
+          )
+      );
+
+    res.json({
+      requests
+    });
+  }
+);
+
+app.post(
+  "/api/friends/respond",
+  (req, res) => {
+    const {
+      pseudo,
+      requestId,
+      accept
+    } = req.body;
+
+    const request =
+      db.friendRequests.find(
+        (item) =>
+          item.id === requestId &&
+          normalizePseudo(
+            item.toPseudo
+          ) ===
+          normalizePseudo(pseudo)
+      );
+
+    if (!request) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Demande introuvable."
+        });
+    }
+
+    db.friendRequests =
+      db.friendRequests.filter(
+        (item) =>
+          item.id !== request.id
+      );
+
+    if (accept) {
+      db.friendships.push({
+        id: createId(),
+
+        user1:
+          request.fromPseudo,
+
+        user2:
+          request.toPseudo,
+
+        createdAt:
+          Date.now()
+      });
+    }
+
+    saveDatabase();
+
+    res.json({
+      message:
+        accept
+          ? "Ami ajouté !"
+          : "Demande refusée."
+    });
+  }
+);
+
+
+/* =========================================
+   API : CHAT AMIS
+========================================= */
+
+app.get(
+  "/api/chat/:pseudo/:friendPseudo",
+  (req, res) => {
+    const {
+      pseudo,
+      friendPseudo
+    } = req.params;
+
+    const messages =
+      db.messages.filter(
+        (message) =>
+          (
+            normalizePseudo(
+              message.from
+            ) ===
+            normalizePseudo(pseudo) &&
+            normalizePseudo(
+              message.to
+            ) ===
+            normalizePseudo(friendPseudo)
+          ) ||
+          (
+            normalizePseudo(
+              message.from
+            ) ===
+            normalizePseudo(friendPseudo) &&
+            normalizePseudo(
+              message.to
+            ) ===
+            normalizePseudo(pseudo)
+          )
+      );
+
+    res.json({
+      messages
+    });
+  }
+);
+
+app.post(
+  "/api/chat/send",
+  (req, res) => {
+    const {
+      fromPseudo,
+      toPseudo,
+      text
+    } = req.body;
+
+    const content =
+      String(text || "")
+        .trim()
+        .slice(0, 500);
+
+    if (!content) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Message vide."
+        });
+    }
+
+    const areFriends =
+      db.friendships.some(
+        (friendship) =>
+          (
+            normalizePseudo(
+              friendship.user1
+            ) ===
+            normalizePseudo(fromPseudo) &&
+            normalizePseudo(
+              friendship.user2
+            ) ===
+            normalizePseudo(toPseudo)
+          ) ||
+          (
+            normalizePseudo(
+              friendship.user2
+            ) ===
+            normalizePseudo(fromPseudo) &&
+            normalizePseudo(
+              friendship.user1
+            ) ===
+            normalizePseudo(toPseudo)
+          )
+      );
+
+    if (!areFriends) {
+      return res
+        .status(403)
+        .json({
+          message:
+            "Le chat est réservé aux amis."
+        });
+    }
+
+    const message = {
+      id: createId(),
+
+      from:
+        cleanPseudo(fromPseudo),
+
+      to:
+        cleanPseudo(toPseudo),
+
+      text: content,
+
+      createdAt:
+        Date.now()
+    };
+
+    db.messages.push(
+      message
+    );
+
+    saveDatabase();
+
+    const socketId =
+      onlineUsers.get(
+        normalizePseudo(
+          toPseudo
+        )
+      );
+
+    if (socketId) {
+      io.to(socketId).emit(
+        "friendMessage",
+        message
+      );
+    }
+
+    res.json({
+      message
+    });
+  }
+);
+
+
+/* =========================================
+   API : PARAMÈTRES
+========================================= */
+
+app.post(
+  "/api/settings/chat",
+  (req, res) => {
+    const {
+      pseudo,
+      chatEnabled
+    } = req.body;
 
     const user =
       findUser(pseudo);
 
-
-    /*
-     * Version simple.
-     * Un vrai système devrait envoyer
-     * un email avec un token sécurisé.
-     */
-
     if (!user) {
-
-      return res.status(404).json({
-        message:
-          "Joueur introuvable."
-      });
-
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
     }
 
+    user.chatEnabled =
+      Boolean(chatEnabled);
 
-    return res.json({
+    saveDatabase();
+
+    res.json({
       message:
-        "Demande enregistrée. Contacte l'administrateur pour récupérer ton compte."
-    });
+        "Paramètre enregistré.",
 
+      user:
+        publicUser(user)
+    });
   }
 );
 
 
-/* =====================================
-   SALONS
-===================================== */
+/* =========================================
+   API : COMPTE
+========================================= */
 
-const rooms = new Map();
+app.post(
+  "/api/account/email",
+  async (req, res) => {
+    const {
+      pseudo,
+      email,
+      password
+    } = req.body;
 
+    const user =
+      findUser(pseudo);
 
-function generateRoomCode() {
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
+    }
 
-  let code;
+    const valid =
+      await bcrypt.compare(
+        password || "",
+        user.password
+      );
 
-  do {
+    if (!valid) {
+      return res
+        .status(401)
+        .json({
+          message:
+            "Mot de passe incorrect."
+        });
+    }
 
-    code =
-      Math.random()
-        .toString(36)
-        .slice(2, 8)
-        .toUpperCase();
+    user.email =
+      String(email || "")
+        .trim()
+        .toLowerCase();
 
-  } while (
-    rooms.has(code)
-  );
+    saveDatabase();
 
+    res.json({
+      message:
+        "Adresse e-mail modifiée."
+    });
+  }
+);
 
-  return code;
+app.post(
+  "/api/account/delete",
+  async (req, res) => {
+    const {
+      pseudo,
+      password
+    } = req.body;
 
-}
+    const user =
+      findUser(pseudo);
 
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Utilisateur introuvable."
+        });
+    }
 
-function getPublicRooms() {
+    const valid =
+      await bcrypt.compare(
+        password || "",
+        user.password
+      );
 
-  return Array.from(
-    rooms.values()
-  )
-    .filter(
-      (room) =>
-        !room.started
-    )
-    .map(
-      (room) => ({
+    if (!valid) {
+      return res
+        .status(401)
+        .json({
+          message:
+            "Mot de passe incorrect."
+        });
+    }
 
-        code:
-          room.code,
+    const normalized =
+      normalizePseudo(
+        user.pseudo
+      );
 
-        host:
-          room.host,
+    db.users =
+      db.users.filter(
+        (item) =>
+          normalizePseudo(
+            item.pseudo
+          ) !== normalized
+      );
 
-        players:
-          [...room.players]
+    db.friendships =
+      db.friendships.filter(
+        (item) =>
+          normalizePseudo(
+            item.user1
+          ) !== normalized &&
+          normalizePseudo(
+            item.user2
+          ) !== normalized
+      );
 
-      })
+    removeUserFromRooms(
+      user.pseudo
     );
 
-}
+    saveDatabase();
+
+    res.json({
+      message:
+        "Compte supprimé."
+    });
+  }
+);
 
 
-function broadcastRooms() {
+/* =========================================
+   API : MOT DE PASSE
+========================================= */
 
-  io.emit(
-    "roomsList",
-    getPublicRooms()
-  );
+app.post(
+  "/api/password/forgot",
+  (req, res) => {
+    const user =
+      findUser(
+        req.body.pseudo
+      );
 
-}
+    /*
+      Pour une vraie version publique,
+      il faudra ajouter un système
+      d'e-mail sécurisé.
+    */
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Joueur introuvable."
+        });
+    }
+
+    res.json({
+      message:
+        "Fonction de récupération disponible prochainement."
+    });
+  }
+);
 
 
-/* =====================================
+/* =========================================
    SOCKET.IO
-===================================== */
+========================================= */
 
 io.on(
   "connection",
   (socket) => {
 
     console.log(
-      "Client connecté :",
+      "Connexion :",
       socket.id
     );
 
 
-    /* UTILISATEUR EN LIGNE */
+    /* =====================================
+       UTILISATEUR EN LIGNE
+    ===================================== */
 
     socket.on(
       "userOnline",
-      ({ pseudo }) => {
+      (data) => {
+        const pseudo =
+          cleanPseudo(
+            data?.pseudo
+          );
 
         if (!pseudo) return;
 
-        socket.data.pseudo =
-          String(pseudo);
+        const user =
+          findUser(pseudo);
 
-      }
-    );
+        if (!user) return;
 
-
-    /* UTILISATEUR HORS LIGNE */
-
-    socket.on(
-      "userOffline",
-      () => {
-
-        socket.data.pseudo =
-          null;
-
-      }
-    );
-
-
-    /* LISTE DES SALONS */
-
-    socket.on(
-      "getRooms",
-      () => {
-
-        socket.emit(
-          "roomsList",
-          getPublicRooms()
+        onlineUsers.set(
+          normalizePseudo(
+            user.pseudo
+          ),
+          socket.id
         );
 
+        socketUsers.set(
+          socket.id,
+          user.pseudo
+        );
+
+        socket.emit(
+          "onlineUsers",
+          getOnlineUserInfo()
+        );
+
+        io.emit(
+          "userStatusChanged",
+          {
+            pseudo:
+              user.pseudo,
+
+            online: true
+          }
+        );
       }
     );
 
 
-    /* CRÉER UN SALON */
+    /* =====================================
+       CRÉER SALON
+    ===================================== */
 
     socket.on(
       "createRoom",
-      ({ pseudo }) => {
+      (data) => {
+        const pseudo =
+          cleanPseudo(
+            data?.pseudo
+          );
 
-        if (!pseudo) {
+        const user =
+          findUser(pseudo);
 
+        if (!user) {
           socket.emit(
             "roomError",
-            "Pseudo invalide."
+            "Utilisateur introuvable."
           );
 
           return;
-
         }
 
-
-        const code =
-          generateRoomCode();
-
+        removeUserFromRooms(
+          user.pseudo
+        );
 
         const room = {
-
-          code,
+          code:
+            createUniqueRoomCode(),
 
           host:
-            String(pseudo),
+            user.pseudo,
+
+          ranked: false,
+
+          status:
+            "waiting",
 
           players: [
-            String(pseudo)
+            {
+              pseudo:
+                user.pseudo,
+
+              isBot: false,
+
+              socketId:
+                socket.id
+            }
           ],
 
-          started:
-            false
-
+          createdAt:
+            Date.now()
         };
 
-
-        rooms.set(
-          code,
+        db.rooms.push(
           room
         );
 
-
         socket.join(
-          "room-" + code
+          room.code
         );
 
-
-        socket.data.roomCode =
-          code;
-
+        saveDatabase();
 
         socket.emit(
           "roomCreated",
-          {
-            code:
-              room.code,
-
-            host:
-              room.host,
-
-            players:
-              [...room.players]
-          }
+          roomPublic(room)
         );
 
-
-        broadcastRooms();
-
+        io.emit(
+          "roomsList",
+          db.rooms
+            .filter(
+              (item) =>
+                item.status ===
+                "waiting"
+            )
+            .map(roomPublic)
+        );
       }
     );
 
 
-    /* REJOINDRE UN SALON */
+    /* =====================================
+       MODE CLASSÉ
+    ===================================== */
+
+    socket.on(
+      "setRoomRanked",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        if (!room) return;
+
+        if (
+          normalizePseudo(
+            room.host
+          ) !==
+          normalizePseudo(
+            data?.pseudo
+          )
+        ) {
+          socket.emit(
+            "roomError",
+            "Seul le créateur peut modifier ce mode."
+          );
+
+          return;
+        }
+
+        room.ranked =
+          Boolean(
+            data?.ranked
+          );
+
+        saveDatabase();
+
+        io.to(room.code).emit(
+          "roomUpdated",
+          roomPublic(room)
+        );
+      }
+    );
+
+
+    /* =====================================
+       REJOINDRE SALON
+    ===================================== */
 
     socket.on(
       "joinRoom",
-      ({ code, pseudo }) => {
-
-        const roomCode =
+      (data) => {
+        const code =
           String(
-            code || ""
+            data?.code || ""
           )
             .trim()
             .toUpperCase();
 
-
-        const room =
-          rooms.get(
-            roomCode
+        const pseudo =
+          cleanPseudo(
+            data?.pseudo
           );
 
+        const room =
+          findRoom(code);
 
-        if (!room) {
+        const user =
+          findUser(pseudo);
 
+        if (
+          !room ||
+          !user
+        ) {
           socket.emit(
             "roomError",
             "Salon introuvable."
           );
 
           return;
-
         }
-
-
-        if (room.started) {
-
-          socket.emit(
-            "roomError",
-            "La partie a déjà commencé."
-          );
-
-          return;
-
-        }
-
-
-        if (!pseudo) {
-
-          socket.emit(
-            "roomError",
-            "Pseudo invalide."
-          );
-
-          return;
-
-        }
-
-
-        const playerPseudo =
-          String(pseudo);
-
 
         if (
-          !room.players.includes(
-            playerPseudo
-          )
+          room.status !==
+          "waiting"
         ) {
-
-          room.players.push(
-            playerPseudo
+          socket.emit(
+            "roomError",
+            "Cette partie a déjà commencé."
           );
 
+          return;
         }
 
+        const alreadyInRoom =
+          room.players.some(
+            (player) =>
+              normalizePseudo(
+                player.pseudo
+              ) ===
+              normalizePseudo(
+                user.pseudo
+              )
+          );
+
+        if (!alreadyInRoom) {
+          if (
+            room.players.length >= 8
+          ) {
+            socket.emit(
+              "roomError",
+              "Le salon est complet."
+            );
+
+            return;
+          }
+
+          removeUserFromRooms(
+            user.pseudo
+          );
+
+          room.players.push({
+            pseudo:
+              user.pseudo,
+
+            isBot: false,
+
+            socketId:
+              socket.id
+          });
+        }
 
         socket.join(
-          "room-" + roomCode
+          room.code
         );
 
-
-        socket.data.roomCode =
-          roomCode;
-
-
-        const roomData = {
-
-          code:
-            room.code,
-
-          host:
-            room.host,
-
-          players:
-            [...room.players]
-
-        };
-
+        saveDatabase();
 
         socket.emit(
           "joinedRoom",
-          roomData
+          roomPublic(room)
         );
 
-
-        io.to(
-          "room-" + roomCode
-        ).emit(
+        io.to(room.code).emit(
           "roomUpdated",
-          roomData
+          roomPublic(room)
         );
 
-
-        broadcastRooms();
-
+        io.emit(
+          "roomsList",
+          db.rooms
+            .filter(
+              (item) =>
+                item.status ===
+                "waiting"
+            )
+            .map(roomPublic)
+        );
       }
     );
 
 
-    /* LANCER UNE PARTIE */
+    /* =====================================
+       INVITER UN AMI
+    ===================================== */
 
     socket.on(
-      "startGame",
-      ({ code, pseudo }) => {
-
-        const roomCode =
-          String(
-            code || ""
-          )
-            .trim()
-            .toUpperCase();
-
-
+      "inviteFriendToRoom",
+      (data) => {
         const room =
-          rooms.get(
-            roomCode
+          findRoom(
+            data?.code
           );
 
+        const fromPseudo =
+          cleanPseudo(
+            data?.fromPseudo
+          );
+
+        const toPseudo =
+          cleanPseudo(
+            data?.toPseudo
+          );
 
         if (!room) {
-
           socket.emit(
             "roomError",
             "Salon introuvable."
           );
 
           return;
-
         }
 
+        if (
+          normalizePseudo(
+            room.host
+          ) !==
+          normalizePseudo(
+            fromPseudo
+          )
+        ) {
+          socket.emit(
+            "roomError",
+            "Seul le créateur peut inviter."
+          );
+
+          return;
+        }
+
+        addNotification(
+          toPseudo,
+          {
+            title:
+              "🎮 Invitation",
+
+            message:
+              `${fromPseudo} vous invite dans le salon ${room.code}.`,
+
+            type:
+              "roomInvite"
+          }
+        );
+
+        const targetSocket =
+          onlineUsers.get(
+            normalizePseudo(
+              toPseudo
+            )
+          );
+
+        if (targetSocket) {
+          io.to(targetSocket).emit(
+            "roomInvitation",
+            {
+              code:
+                room.code,
+
+              fromPseudo
+            }
+          );
+        }
+      }
+    );
+
+
+    /* =====================================
+       RECHERCHE DE JOUEURS
+    ===================================== */
+
+    socket.on(
+      "searchPlayers",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        if (!room) {
+          socket.emit(
+            "roomError",
+            "Salon introuvable."
+          );
+
+          return;
+        }
+
+        socket.emit(
+          "playerSearchStarted",
+          {
+            duration: 10000
+          }
+        );
+
+        /*
+          Après 10 secondes,
+          le serveur complète
+          automatiquement avec des bots.
+        */
+
+        setTimeout(
+          () => {
+            if (
+              room.status !==
+              "waiting"
+            ) {
+              return;
+            }
+
+            addBotsToRoom(
+              room
+            );
+
+            saveDatabase();
+
+            io.to(room.code).emit(
+              "playerSearchFinished",
+              roomPublic(room)
+            );
+          },
+          10000
+        );
+      }
+    );
+
+
+    /* =====================================
+       LANCER AVEC D'AUTRES JOUEURS
+    ===================================== */
+
+    socket.on(
+      "startGame",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        const pseudo =
+          cleanPseudo(
+            data?.pseudo
+          );
+
+        if (!room) {
+          socket.emit(
+            "roomError",
+            "Salon introuvable."
+          );
+
+          return;
+        }
 
         if (
-          room.host !==
-          String(pseudo)
+          normalizePseudo(
+            room.host
+          ) !==
+          normalizePseudo(
+            pseudo
+          )
         ) {
-
           socket.emit(
             "roomError",
             "Seul le créateur peut lancer la partie."
           );
 
           return;
-
         }
 
-
         if (
-          room.players.length < 2
+          room.status !==
+          "waiting"
         ) {
-
           socket.emit(
             "roomError",
-            "Il faut au moins 2 joueurs."
+            "La partie est déjà lancée."
           );
 
           return;
-
         }
 
+        /*
+          S'il manque des joueurs,
+          les bots complètent jusqu'à 8.
+        */
 
-        room.started =
-          true;
+        addBotsToRoom(
+          room
+        );
 
+        room.status =
+          "playing";
 
-        io.to(
-          "room-" + roomCode
-        ).emit(
+        room.game =
+          createGame(room);
+
+        saveDatabase();
+
+        io.to(room.code).emit(
           "gameStarted",
           {
+            room:
+              roomPublic(room),
 
-            code:
-              room.code,
+            phase:
+              room.game.phase,
+
+            day:
+              room.game.day,
 
             players:
-              [...room.players]
+              room.game.players.map(
+                (player) => ({
+                  pseudo:
+                    player.pseudo,
 
+                  alive:
+                    player.alive,
+
+                  isBot:
+                    player.isBot
+                })
+              )
           }
         );
 
+        /*
+          Chaque vrai joueur
+          reçoit uniquement son rôle.
+        */
 
-        broadcastRooms();
+        room.game.players.forEach(
+          (player) => {
+            if (player.isBot) return;
 
+            const playerSocket =
+              onlineUsers.get(
+                normalizePseudo(
+                  player.pseudo
+                )
+              );
+
+            if (playerSocket) {
+              io.to(playerSocket).emit(
+                "yourRole",
+                {
+                  role:
+                    player.role
+                }
+              );
+            }
+          }
+        );
       }
     );
 
 
-    /* DÉCONNEXION */
+    /* =====================================
+       LANCER AVEC BOTS
+    ===================================== */
+
+    socket.on(
+      "startGameWithBots",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        const pseudo =
+          cleanPseudo(
+            data?.pseudo
+          );
+
+        if (!room) {
+          socket.emit(
+            "roomError",
+            "Salon introuvable."
+          );
+
+          return;
+        }
+
+        if (
+          normalizePseudo(
+            room.host
+          ) !==
+          normalizePseudo(
+            pseudo
+          )
+        ) {
+          socket.emit(
+            "roomError",
+            "Seul le créateur peut lancer la partie."
+          );
+
+          return;
+        }
+
+        socket.emit(
+          "botLoadingStarted",
+          {
+            duration: 10000
+          }
+        );
+
+        setTimeout(
+          () => {
+            if (
+              room.status !==
+              "waiting"
+            ) {
+              return;
+            }
+
+            addBotsToRoom(
+              room
+            );
+
+            room.status =
+              "playing";
+
+            room.game =
+              createGame(room);
+
+            saveDatabase();
+
+            io.to(room.code).emit(
+              "gameStarted",
+              {
+                room:
+                  roomPublic(room),
+
+                phase:
+                  room.game.phase,
+
+                day:
+                  room.game.day,
+
+                players:
+                  room.game.players.map(
+                    (player) => ({
+                      pseudo:
+                        player.pseudo,
+
+                      alive:
+                        player.alive,
+
+                      isBot:
+                        player.isBot
+                    })
+                  )
+              }
+            );
+
+            room.game.players.forEach(
+              (player) => {
+                if (
+                  player.isBot
+                ) {
+                  return;
+                }
+
+                const playerSocket =
+                  onlineUsers.get(
+                    normalizePseudo(
+                      player.pseudo
+                    )
+                  );
+
+                if (playerSocket) {
+                  io.to(
+                    playerSocket
+                  ).emit(
+                    "yourRole",
+                    {
+                      role:
+                        player.role
+                    }
+                  );
+                }
+              }
+            );
+          },
+          10000
+        );
+      }
+    );
+
+
+    /* =====================================
+       VOTE DE NUIT
+    ===================================== */
+
+    socket.on(
+      "nightVote",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        if (
+          !room ||
+          !room.game
+        ) {
+          return;
+        }
+
+        const game =
+          room.game;
+
+        if (
+          game.phase !==
+          "night"
+        ) {
+          return;
+        }
+
+        const voter =
+          game.players.find(
+            (player) =>
+              player.pseudo ===
+              data?.pseudo
+          );
+
+        const target =
+          game.players.find(
+            (player) =>
+              player.pseudo ===
+              data?.targetPseudo
+          );
+
+        if (
+          !voter ||
+          !target ||
+          !voter.alive ||
+          !target.alive
+        ) {
+          return;
+        }
+
+        if (
+          voter.role !==
+          "Loup-Garou"
+        ) {
+          return;
+        }
+
+        game.nightVotes[
+          voter.pseudo
+        ] =
+          target.pseudo;
+
+        const wolves =
+          game.players.filter(
+            (player) =>
+              player.alive &&
+              player.role ===
+              "Loup-Garou"
+          );
+
+        if (
+          Object.keys(
+            game.nightVotes
+          ).length >=
+          wolves.length
+        ) {
+          const counts = {};
+
+          Object.values(
+            game.nightVotes
+          ).forEach(
+            (targetPseudo) => {
+              counts[targetPseudo] =
+                (
+                  counts[targetPseudo] ||
+                  0
+                ) + 1;
+            }
+          );
+
+          const victimPseudo =
+            Object.keys(counts)
+              .sort(
+                (a, b) =>
+                  counts[b] -
+                  counts[a]
+              )[0];
+
+          const victim =
+            game.players.find(
+              (player) =>
+                player.pseudo ===
+                victimPseudo
+            );
+
+          if (victim) {
+            victim.alive = false;
+          }
+
+          game.nightVotes = {};
+
+          if (
+            checkGameWinner(game)
+          ) {
+            finishGame(room);
+            return;
+          }
+
+          game.phase = "day";
+
+          saveDatabase();
+
+          io.to(room.code).emit(
+            "dayStarted",
+            {
+              victim:
+                victim
+                  ? victim.pseudo
+                  : null,
+
+              players:
+                game.players.map(
+                  (player) => ({
+                    pseudo:
+                      player.pseudo,
+
+                    alive:
+                      player.alive
+                  })
+                )
+            }
+          );
+        }
+      }
+    );
+
+
+    /* =====================================
+       VOTE DU JOUR
+    ===================================== */
+
+    socket.on(
+      "dayVote",
+      (data) => {
+        const room =
+          findRoom(
+            data?.code
+          );
+
+        if (
+          !room ||
+          !room.game
+        ) {
+          return;
+        }
+
+        const game =
+          room.game;
+
+        if (
+          game.phase !==
+          "day"
+        ) {
+          return;
+        }
+
+        const voter =
+          game.players.find(
+            (player) =>
+              player.pseudo ===
+              data?.pseudo
+          );
+
+        const target =
+          game.players.find(
+            (player) =>
+              player.pseudo ===
+              data?.targetPseudo
+          );
+
+        if (
+          !voter ||
+          !target ||
+          !voter.alive ||
+          !target.alive
+        ) {
+          return;
+        }
+
+        game.dayVotes[
+          voter.pseudo
+        ] =
+          target.pseudo;
+
+        const alive =
+          getAlivePlayers(game);
+
+        if (
+          Object.keys(
+            game.dayVotes
+          ).length >=
+          alive.filter(
+            (player) =>
+              !player.isBot
+          ).length
+        ) {
+          const counts = {};
+
+          Object.values(
+            game.dayVotes
+          ).forEach(
+            (targetPseudo) => {
+              counts[targetPseudo] =
+                (
+                  counts[targetPseudo] ||
+                  0
+                ) + 1;
+            }
+          );
+
+          const eliminatedPseudo =
+            Object.keys(counts)
+              .sort(
+                (a, b) =>
+                  counts[b] -
+                  counts[a]
+              )[0];
+
+          const eliminated =
+            game.players.find(
+              (player) =>
+                player.pseudo ===
+                eliminatedPseudo
+            );
+
+          if (eliminated) {
+            eliminated.alive =
+              false;
+          }
+
+          game.dayVotes = {};
+
+          if (
+            checkGameWinner(game)
+          ) {
+            finishGame(room);
+            return;
+          }
+
+          game.phase =
+            "night";
+
+          game.day++;
+
+          saveDatabase();
+
+          io.to(room.code).emit(
+            "nightStarted",
+            {
+              day:
+                game.day,
+
+              eliminated:
+                eliminated
+                  ? eliminated.pseudo
+                  : null
+            }
+          );
+        }
+      }
+    );
+
+
+    /* =====================================
+       LISTE DES SALONS
+    ===================================== */
+
+    socket.on(
+      "getRooms",
+      () => {
+        socket.emit(
+          "roomsList",
+          db.rooms
+            .filter(
+              (room) =>
+                room.status ===
+                "waiting"
+            )
+            .map(roomPublic)
+        );
+      }
+    );
+
+
+    /* =====================================
+       DÉCONNEXION
+    ===================================== */
 
     socket.on(
       "disconnect",
       () => {
+        const pseudo =
+          socketUsers.get(
+            socket.id
+          );
+
+        if (pseudo) {
+          onlineUsers.delete(
+            normalizePseudo(
+              pseudo
+            )
+          );
+
+          socketUsers.delete(
+            socket.id
+          );
+
+          io.emit(
+            "userStatusChanged",
+            {
+              pseudo,
+              online: false
+            }
+          );
+        }
 
         console.log(
-          "Client déconnecté :",
+          "Déconnexion :",
           socket.id
         );
-
       }
     );
-
   }
 );
 
 
-/* =====================================
-   DÉMARRER SERVEUR
-===================================== */
+/* =========================================
+   PAGE PRINCIPALE
+========================================= */
+
+app.get(
+  "*",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "public",
+        "index.html"
+      )
+    );
+  }
+);
+
+
+/* =========================================
+   NETTOYAGE DES SALONS
+========================================= */
+
+setInterval(
+  () => {
+    const now = Date.now();
+
+    db.rooms =
+      db.rooms.filter(
+        (room) => {
+          if (
+            room.status ===
+            "waiting"
+          ) {
+            return (
+              now -
+              room.createdAt
+            ) <
+              1000 *
+              60 *
+              60 *
+              12;
+          }
+
+          return true;
+        }
+      );
+
+    saveDatabase();
+
+  },
+  1000 * 60 * 10
+);
+
+
+/* =========================================
+   DÉMARRAGE
+========================================= */
 
 server.listen(
   PORT,
   () => {
-
     console.log(
-      "🐺 Loup-Garou V7 lancé sur :"
+      `🐺 Loup-Garou V7 lancé sur le port ${PORT}`
     );
-
-    console.log(
-      "http://localhost:" +
-      PORT
-    );
-
   }
 );
