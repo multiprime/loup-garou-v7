@@ -1,2121 +1,743 @@
-/* =====================================
-   LOUP-GAROU V7 - SCRIPT CLIENT
-===================================== */
+/* =========================================================
+   LOUP-GAROU V7
+   STYLE PRINCIPAL
+========================================================= */
 
-const $ = (id) => document.getElementById(id);
-
-const socket = io();
-
-let currentUser = null;
-let currentRoomCode = null;
-let isRoomHost = false;
-let selectedAdminUser = null;
-
-let classesData = [];
-let friendsData = [];
-let eventData = null;
-
-const ADMIN_PSEUDO = "creator2026";
-
-
-/* =====================================
-   OUTILS
-===================================== */
-
-function showMessage(id, message) {
-  const element = $(id);
-
-  if (element) {
-    element.textContent = message;
-  }
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-function hide(elementId) {
-  const element = $(elementId);
-
-  if (element) {
-    element.classList.add("hidden");
-  }
+html,
+body {
+  min-height: 100%;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-function show(elementId) {
-  const element = $(elementId);
-
-  if (element) {
-    element.classList.remove("hidden");
-  }
+body {
+  background:
+    radial-gradient(circle at top, rgba(70, 15, 15, 0.55), transparent 45%),
+    linear-gradient(135deg, #090909, #151515 45%, #080808);
+  color: #f5f5f5;
+  min-height: 100vh;
 }
 
-async function getJSON(url) {
-  const response = await fetch(url);
-  const data = await response.json();
+/* =========================================================
+   CLASSES GÉNÉRALES
+========================================================= */
 
-  return {
-    response,
-    data
-  };
+.hidden {
+  display: none !important;
 }
 
-async function postJSON(url, body) {
-  const response = await fetch(url, {
-    method: "POST",
-
-    headers: {
-      "Content-Type": "application/json"
-    },
-
-    body: JSON.stringify(body)
-  });
-
-  const data = await response.json();
-
-  return {
-    response,
-    data
-  };
+.screen {
+  min-height: 100vh;
+  width: 100%;
 }
 
+.page {
+  width: min(1200px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 35px 0 60px;
+}
 
-/* =====================================
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* =========================================================
+   CONNEXION / INSCRIPTION
+========================================================= */
+
+#authScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 25px;
+  background:
+    linear-gradient(rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.8)),
+    radial-gradient(circle at center, #3b1010, #070707 70%);
+}
+
+.auth-box {
+  width: min(460px, 100%);
+  padding: 35px;
+  border: 1px solid #5b5b5b;
+  border-radius: 18px;
+  background: rgba(20, 20, 20, 0.96);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.75),
+    inset 0 0 35px rgba(255, 255, 255, 0.025);
+  text-align: center;
+}
+
+.auth-box h1 {
+  font-size: 38px;
+  margin-bottom: 8px;
+  color: #f1d7a1;
+  text-shadow: 0 0 20px rgba(255, 200, 100, 0.18);
+}
+
+.auth-box h2 {
+  color: #f1d7a1;
+  margin-bottom: 25px;
+}
+
+.subtitle {
+  color: #aaa;
+  margin-bottom: 25px;
+}
+
+.auth-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.auth-tabs button {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #444;
+  border-radius: 9px;
+  background: #181818;
+  color: #aaa;
+}
+
+.auth-tabs button.active {
+  background: #641919;
+  border-color: #a83b3b;
+  color: white;
+}
+
+#loginForm,
+#registerForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-box input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1px solid #454545;
+  border-radius: 9px;
+  outline: none;
+  background: #0d0d0d;
+  color: white;
+}
+
+.auth-box input:focus {
+  border-color: #9e3636;
+}
+
+.link-button {
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  color: #d9a75f;
+  text-decoration: underline;
+}
+
+#authMessage,
+#forgotMessage {
+  margin-top: 15px;
+  color: #e8b26a;
+}
+
+/* =========================================================
+   BOUTONS
+========================================================= */
+
+.main-button,
+.secondary-button,
+.danger-button,
+.logout-button,
+.back-button {
+  border-radius: 9px;
+  padding: 11px 17px;
+  border: 1px solid #555;
+  transition: 0.2s ease;
+}
+
+.main-button {
+  background: linear-gradient(135deg, #8d2222, #4e1010);
+  border-color: #b84444;
+  color: white;
+  box-shadow: 0 5px 20px rgba(130, 20, 20, 0.22);
+}
+
+.main-button:hover {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #ad2b2b, #661515);
+}
+
+.secondary-button {
+  background: #202020;
+  color: #eee;
+}
+
+.secondary-button:hover {
+  background: #303030;
+}
+
+.danger-button {
+  background: #641313;
+  color: white;
+  border-color: #9c3030;
+}
+
+.logout-button {
+  background: #151515;
+  color: #aaa;
+  border-color: #333;
+}
+
+.back-button {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 100;
+  background: rgba(15, 15, 15, 0.92);
+  color: white;
+}
+
+/* =========================================================
+   MENU PRINCIPAL
+========================================================= */
+
+#menuScreen {
+  min-height: 100vh;
+  padding-bottom: 50px;
+}
+
+.top-bar {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  padding: 15px 30px;
+  background: rgba(8, 8, 8, 0.94);
+  border-bottom: 1px solid #3d3d3d;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.profile-icon {
+  width: 55px;
+  height: 55px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #2a0e0e;
+  border: 1px solid #743333;
+  font-size: 28px;
+}
+
+#playerName {
+  color: #f0d39e;
+  font-size: 18px;
+}
+
+#playerTitle {
+  color: #888;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.player-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  color: #aaa;
+}
+
+.player-stats span {
+  padding: 7px 10px;
+  border: 1px solid #333;
+  border-radius: 8px;
+  background: #121212;
+}
+
+.player-stats b {
+  color: #f2d28e;
+}
+
+/* =========================================================
+   BARRE XP
+   CACHÉE COMME DEMANDÉ
+========================================================= */
+
+#xpBarContainer {
+  display: none !important;
+}
+
+/* =========================================================
+   ANNONCE
+========================================================= */
+
+.announcement-box {
+  width: min(1050px, calc(100% - 40px));
+  min-height: 90px;
+  margin: 25px auto;
+  padding: 20px;
+  border: 1px solid #6a4b2d;
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, rgba(48, 34, 20, 0.8), rgba(20, 20, 20, 0.9));
+  color: #e5d0a6;
+}
+
+.announcement-box:empty {
+  display: none;
+}
+
+/* =========================================================
+   MENU
+========================================================= */
+
+.menu-grid {
+  width: min(1050px, calc(100% - 40px));
+  margin: 35px auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.menu-button {
+  min-height: 115px;
+  border: 1px solid #414141;
+  border-radius: 15px;
+  background:
+    linear-gradient(145deg, #1b1b1b, #0d0d0d);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 17px;
+  transition: 0.2s ease;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+.menu-button span {
+  color: #ddd;
+}
+
+.menu-button:hover {
+  transform: translateY(-4px);
+  border-color: #843333;
+  background:
+    linear-gradient(145deg, #321414, #111111);
+  box-shadow: 0 10px 35px rgba(100, 20, 20, 0.25);
+}
+
+.menu-button:first-letter {
+  font-size: 28px;
+}
+
+/* =========================================================
    PAGES
-===================================== */
+========================================================= */
 
-const pages = [
-  "gameLobby",
-  "classesPage",
-  "questsPage",
-  "friendsPage",
-  "rankingPage",
-  "settingsPage",
-  "adminPage",
-  "shopPage",
-  "bloodMoonPage"
-];
-
-function hidePages() {
-  pages.forEach((pageId) => {
-    hide(pageId);
-  });
-
-  hide("backButton");
+.page h2 {
+  margin-bottom: 25px;
+  font-size: 34px;
+  color: #ead09d;
+  text-shadow: 0 0 15px rgba(220, 170, 90, 0.1);
 }
 
-function openPage(pageId) {
-  hidePages();
-
-  show(pageId);
-  show("backButton");
+.page > p {
+  color: #999;
+  margin-bottom: 20px;
 }
 
-if ($("backButton")) {
-  $("backButton").addEventListener("click", () => {
-    hidePages();
-  });
-}
-
-
-/* =====================================
-   NAVIGATION
-===================================== */
-
-if ($("playButton")) {
-  $("playButton").addEventListener("click", () => {
-    openPage("gameLobby");
-
-    currentRoomCode = null;
-    isRoomHost = false;
-
-    hide("startGameButton");
-
-    loadRooms();
-    loadFriends();
-  });
-}
-
-if ($("classesButton")) {
-  $("classesButton").addEventListener("click", async () => {
-    openPage("classesPage");
-
-    await loadClasses();
-  });
-}
-
-if ($("questsButton")) {
-  $("questsButton").addEventListener("click", async () => {
-    openPage("questsPage");
-
-    await loadQuests();
-  });
-}
-
-if ($("friendsButton")) {
-  $("friendsButton").addEventListener("click", async () => {
-    openPage("friendsPage");
-
-    await loadFriends();
-  });
-}
-
-if ($("rankingButton")) {
-  $("rankingButton").addEventListener("click", async () => {
-    openPage("rankingPage");
-
-    await loadRanking();
-  });
-}
-
-if ($("settingsButton")) {
-  $("settingsButton").addEventListener("click", () => {
-    openPage("settingsPage");
-  });
-}
-
-if ($("shopButton")) {
-  $("shopButton").addEventListener("click", async () => {
-    openPage("shopPage");
-
-    await loadShop();
-  });
-}
-
-if ($("bloodMoonButton")) {
-  $("bloodMoonButton").addEventListener("click", async () => {
-    openPage("bloodMoonPage");
-
-    await loadBloodMoon();
-  });
-}
-
-
-/* =====================================
-   AUTHENTIFICATION
-===================================== */
-
-function showLogin() {
-  show("loginForm");
-  hide("registerForm");
-
-  $("loginTab")?.classList.add("active");
-  $("registerTab")?.classList.remove("active");
-
-  showMessage("authMessage", "");
-}
-
-function showRegister() {
-  hide("loginForm");
-  show("registerForm");
-
-  $("registerTab")?.classList.add("active");
-  $("loginTab")?.classList.remove("active");
-
-  showMessage("authMessage", "");
-}
-
-$("loginTab")?.addEventListener("click", showLogin);
-$("registerTab")?.addEventListener("click", showRegister);
-
-
-/* =====================================
-   INSCRIPTION
-===================================== */
-
-$("registerForm")?.addEventListener(
-  "submit",
-  async (event) => {
-    event.preventDefault();
-
-    const pseudo =
-      $("registerPseudo").value.trim();
-
-    const email =
-      $("registerEmail").value.trim();
-
-    const password =
-      $("registerPassword").value;
-
-    showMessage(
-      "authMessage",
-      "⏳ Création du compte..."
-    );
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/register",
-          {
-            pseudo,
-            email,
-            password
-          }
-        );
-
-      if (!response.ok) {
-        showMessage(
-          "authMessage",
-          "❌ " +
-          (data.message || "Erreur.")
-        );
-
-        return;
-      }
-
-      loginUser(data.user);
-
-      showNotification(
-        "🎁 Bienvenue !",
-        "Vous avez reçu 50 🐺 pièces !"
-      );
-
-    } catch (error) {
-      console.error(error);
-
-      showMessage(
-        "authMessage",
-        "❌ Impossible de joindre le serveur."
-      );
-    }
-  }
-);
-
-
-/* =====================================
-   CONNEXION
-===================================== */
-
-$("loginForm")?.addEventListener(
-  "submit",
-  async (event) => {
-    event.preventDefault();
-
-    const pseudo =
-      $("loginPseudo").value.trim();
-
-    const password =
-      $("loginPassword").value;
-
-    showMessage(
-      "authMessage",
-      "⏳ Connexion..."
-    );
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/login",
-          {
-            pseudo,
-            password
-          }
-        );
-
-      if (!response.ok) {
-        showMessage(
-          "authMessage",
-          "❌ " +
-          (data.message ||
-            "Connexion impossible.")
-        );
-
-        return;
-      }
-
-      loginUser(data.user);
-
-    } catch (error) {
-      console.error(error);
-
-      showMessage(
-        "authMessage",
-        "❌ Impossible de joindre le serveur."
-      );
-    }
-  }
-);
-
-
-/* =====================================
-   UTILISATEUR
-===================================== */
-
-function loginUser(user) {
-  currentUser = user;
-
-  saveCurrentUser();
-
-  socket.emit("userOnline", {
-    pseudo: currentUser.pseudo
-  });
-
-  hide("authScreen");
-  hide("forgotScreen");
-
-  show("menuScreen");
-
-  hidePages();
-
-  updateProfile();
-  updateAdminButton();
-
-  loadEventStatus();
-  loadAnnouncement();
-}
-
-function saveCurrentUser() {
-  if (!currentUser) return;
-
-  localStorage.setItem(
-    "lgv7_user",
-    JSON.stringify(currentUser)
-  );
-}
-
-function updateProfile() {
-  if (!currentUser) return;
-
-  showMessage(
-    "playerName",
-    currentUser.pseudo || "Joueur"
-  );
-
-  showMessage(
-    "playerTitle",
-    currentUser.title ||
-    "Nouveau Villageois"
-  );
-
-  showMessage(
-    "profileIcon",
-    currentUser.icon || "🐺"
-  );
-
-  showMessage(
-    "playerLevel",
-    currentUser.level || 1
-  );
-
-  showMessage(
-    "playerXp",
-    currentUser.xp || 0
-  );
-
-  showMessage(
-    "playerCoins",
-    currentUser.coins || 0
-  );
-
-  showMessage(
-    "playerTrophies",
-    currentUser.trophies || 0
-  );
-}
-
-
-/* =====================================
-   NOTIFICATIONS
-===================================== */
-
-function showNotification(title, message) {
-  const container =
-    $("notifications");
-
-  if (!container) {
-    alert(title + "\n\n" + message);
-    return;
-  }
-
-  const notification =
-    document.createElement("div");
-
-  notification.className =
-    "notification";
-
-  notification.innerHTML = `
-    <strong>${title}</strong>
-    <p>${message}</p>
-    <button>Récupérer</button>
-  `;
-
-  notification
-    .querySelector("button")
-    .addEventListener("click", () => {
-      notification.remove();
-    });
-
-  container.appendChild(notification);
-}
-
-socket.on(
-  "notification",
-  (notification) => {
-    showNotification(
-      notification.title ||
-      "Notification",
-      notification.message || ""
-    );
-  }
-);
-
-
-/* =====================================
-   ADMIN
-===================================== */
-
-function updateAdminButton() {
-  if (!currentUser) {
-    hide("adminButton");
-    return;
-  }
-
-  if (
-    currentUser.pseudo.toLowerCase() ===
-    ADMIN_PSEUDO.toLowerCase()
-  ) {
-    show("adminButton");
-  } else {
-    hide("adminButton");
-  }
-}
-
-$("adminButton")?.addEventListener(
-  "click",
-  async () => {
-    if (
-      !currentUser ||
-      currentUser.pseudo.toLowerCase() !==
-      ADMIN_PSEUDO.toLowerCase()
-    ) {
-      alert("❌ Accès refusé.");
-      return;
-    }
-
-    openPage("adminPage");
-
-    await loadAdminClasses();
-  }
-);
-
-
-/* =====================================
-   CLASSES
-===================================== */
-
-async function loadClasses() {
-  const container =
-    $("classesList");
-
-  if (!container) return;
-
-  container.textContent =
-    "Chargement...";
-
-  try {
-    const { response, data } =
-      await getJSON("/api/classes");
-
-    if (!response.ok) {
-      container.textContent =
-        "❌ Impossible de charger les classes.";
-
-      return;
-    }
-
-    classesData =
-      data.classes || [];
-
-    renderClasses();
-
-  } catch {
-    container.textContent =
-      "❌ Erreur de connexion.";
-  }
-}
-
-function getClassEmoji(classId) {
-  if (!classId) return "🐺";
-
-  if (classId.startsWith("wolf")) {
-    return "🐺";
-  }
-
-  if (classId.startsWith("seer")) {
-    return "🔮";
-  }
-
-  if (classId.startsWith("witch")) {
-    return "🧪";
-  }
-
-  if (classId.startsWith("hunter")) {
-    return "🎯";
-  }
-
-  if (classId.startsWith("premium")) {
-    return "💎";
-  }
-
-  if (classId.startsWith("admin")) {
-    return "👑";
-  }
-
-  return "🐺";
-}
-
-function renderClasses() {
-  const container =
-    $("classesList");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  classesData.forEach((classe) => {
-    const owned =
-      (
-        currentUser.classes ||
-        []
-      ).includes(classe.id);
-
-    const equipped =
-      currentUser.equippedClass ===
-      classe.id;
-
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "class-card" +
-      (
-        equipped
-          ? " equipped"
-          : ""
-      );
-
-    card.innerHTML = `
-      <div>
-        <h3>
-          ${getClassEmoji(classe.id)}
-          ${classe.name}
-        </h3>
-
-        <p>
-          🐺 ${classe.price}
-          • 🎲 ${classe.chance}% de chance
-        </p>
-      </div>
-
-      <button>
-        ${
-          equipped
-            ? "✓ Équipée"
-            : owned
-              ? "Équiper"
-              : "Acheter"
-        }
-      </button>
-    `;
-
-    const button =
-      card.querySelector("button");
-
-    button.disabled = equipped;
-
-    button.addEventListener(
-      "click",
-      () => {
-        if (owned) {
-          equipClass(classe.id);
-        } else {
-          buyClass(classe.id);
-        }
-      }
-    );
-
-    container.appendChild(card);
-  });
-}
-
-async function buyClass(classId) {
-  try {
-    const { response, data } =
-      await postJSON(
-        "/api/classes/buy",
-        {
-          pseudo:
-            currentUser.pseudo,
-
-          classId
-        }
-      );
-
-    if (!response.ok) {
-      alert(
-        "❌ " +
-        (data.message || "Erreur.")
-      );
-
-      return;
-    }
-
-    currentUser = data.user;
-
-    saveCurrentUser();
-    updateProfile();
-    renderClasses();
-
-    alert("🎉 Classe achetée !");
-
-  } catch {
-    alert("❌ Erreur de connexion.");
-  }
-}
-
-async function equipClass(classId) {
-  try {
-    const { response, data } =
-      await postJSON(
-        "/api/classes/equip",
-        {
-          pseudo:
-            currentUser.pseudo,
-
-          classId
-        }
-      );
-
-    if (!response.ok) {
-      alert(
-        "❌ " +
-        (data.message || "Erreur.")
-      );
-
-      return;
-    }
-
-    currentUser = data.user;
-
-    saveCurrentUser();
-    updateProfile();
-
-    renderClasses();
-
-  } catch {
-    alert("❌ Erreur de connexion.");
-  }
-}
-
-
-/* =====================================
-   QUÊTES
-===================================== */
-
-async function loadQuests() {
-  const container =
-    $("questsList");
-
-  if (!container) return;
-
-  container.textContent =
-    "Chargement...";
-
-  try {
-    const { response, data } =
-      await getJSON(
-        "/api/quests/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    if (!response.ok) {
-      container.textContent =
-        "❌ Impossible de charger.";
-
-      return;
-    }
-
-    renderQuests(
-      data.quests || []
-    );
-
-  } catch {
-    container.textContent =
-      "❌ Erreur de connexion.";
-  }
-}
-
-function renderQuests(quests) {
-  const container =
-    $("questsList");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  quests.forEach((quest) => {
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "quest-card";
-
-    card.innerHTML = `
-      <h3>${quest.title}</h3>
-
-      <p>${quest.description}</p>
-
-      <p>
-        ✨ ${quest.xp || 0} XP
-        • 🐺 ${quest.coins || 0}
-      </p>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-
-/* =====================================
+/* =========================================================
    SALON
-===================================== */
+========================================================= */
 
-$("createRoomButton")?.addEventListener(
-  "click",
-  () => {
-    if (!currentUser) {
-      alert("❌ Connecte-toi.");
-      return;
-    }
-
-    const ranked =
-      $("rankedMode")?.checked ||
-      false;
-
-    socket.emit(
-      "createRoom",
-      {
-        pseudo:
-          currentUser.pseudo,
-
-        ranked
-      }
-    );
-  }
-);
-
-socket.on(
-  "roomCreated",
-  (room) => {
-    currentRoomCode =
-      room.code;
-
-    isRoomHost = true;
-
-    if ($("joinRoomCode")) {
-      $("joinRoomCode").value =
-        room.code;
-    }
-
-    renderCurrentRoom(room);
-
-    show("startPlayersButton");
-    show("startBotsButton");
-  }
-);
-
-
-/* =====================================
-   REJOINDRE SALON
-===================================== */
-
-$("joinRoomButton")?.addEventListener(
-  "click",
-  () => {
-    if (!currentUser) return;
-
-    const code =
-      $("joinRoomCode")
-        .value
-        .trim()
-        .toUpperCase();
-
-    if (!code) {
-      alert("❌ Entre un code.");
-      return;
-    }
-
-    socket.emit(
-      "joinRoom",
-      {
-        code,
-
-        pseudo:
-          currentUser.pseudo
-      }
-    );
-  }
-);
-
-socket.on(
-  "joinedRoom",
-  (room) => {
-    currentRoomCode =
-      room.code;
-
-    isRoomHost = false;
-
-    renderCurrentRoom(room);
-
-    hide("startPlayersButton");
-    hide("startBotsButton");
-  }
-);
-
-socket.on(
-  "roomUpdated",
-  (room) => {
-    if (
-      currentRoomCode ===
-      room.code
-    ) {
-      renderCurrentRoom(room);
-    }
-  }
-);
-
-socket.on(
-  "roomError",
-  (message) => {
-    alert("❌ " + message);
-  }
-);
-
-
-/* =====================================
-   LANCER AVEC D'AUTRES JOUEURS
-===================================== */
-
-$("startPlayersButton")?.addEventListener(
-  "click",
-  () => {
-    if (
-      !currentUser ||
-      !currentRoomCode
-    ) {
-      return;
-    }
-
-    if (!isRoomHost) {
-      alert(
-        "❌ Seul le créateur peut lancer."
-      );
-
-      return;
-    }
-
-    startSearchingAnimation(
-      "Recherche de joueurs..."
-    );
-
-    socket.emit(
-      "startGameWithPlayers",
-      {
-        code:
-          currentRoomCode,
-
-        pseudo:
-          currentUser.pseudo
-      }
-    );
-  }
-);
-
-
-/* =====================================
-   LANCER AVEC BOTS
-===================================== */
-
-$("startBotsButton")?.addEventListener(
-  "click",
-  () => {
-    if (
-      !currentUser ||
-      !currentRoomCode
-    ) {
-      return;
-    }
-
-    if (!isRoomHost) {
-      alert(
-        "❌ Seul le créateur peut lancer."
-      );
-
-      return;
-    }
-
-    startSearchingAnimation(
-      "Chargement..."
-    );
-
-    socket.emit(
-      "startGameWithBots",
-      {
-        code:
-          currentRoomCode,
-
-        pseudo:
-          currentUser.pseudo
-      }
-    );
-  }
-);
-
-
-/* =====================================
-   ANIMATION CHARGEMENT
-===================================== */
-
-function startSearchingAnimation(text) {
-  const screen =
-    $("gameLoadingScreen");
-
-  if (!screen) return;
-
-  show("gameLoadingScreen");
-
-  showMessage(
-    "gameLoadingText",
-    text
-  );
-
-  setTimeout(() => {
-    hide("gameLoadingScreen");
-  }, 10000);
+#gameLobby {
+  min-height: calc(100vh - 80px);
 }
 
-
-/* =====================================
-   PARTIE COMMENCE
-===================================== */
-
-socket.on(
-  "gameStarted",
-  (game) => {
-    hide("gameLoadingScreen");
-
-    const container =
-      $("roomsList");
-
-    if (!container) return;
-
-    container.innerHTML = `
-      <div class="room-card">
-        <h2>
-          🐺 La partie commence !
-        </h2>
-
-        <p id="gameRoleText">
-          Attribution des rôles...
-        </p>
-
-        <div id="gamePlayers"></div>
-      </div>
-    `;
-
-    const players =
-      $("gamePlayers");
-
-    (
-      game.players || []
-    ).forEach((player) => {
-      const p =
-        document.createElement("p");
-
-      const pseudo =
-        typeof player === "string"
-          ? player
-          : player.pseudo;
-
-      p.textContent =
-        "👤 " + pseudo;
-
-      players.appendChild(p);
-    });
-
-    if (
-      game.role &&
-      $("gameRoleText")
-    ) {
-      $("gameRoleText").textContent =
-        "Ton rôle : " +
-        game.role;
-    }
-
-    hide("startPlayersButton");
-    hide("startBotsButton");
-  }
-);
-
-
-/* =====================================
-   AFFICHER SALON
-===================================== */
-
-function renderCurrentRoom(room) {
-  const container =
-    $("roomsList");
-
-  if (!container) return;
-
-  container.innerHTML = `
-    <div class="room-card">
-
-      <h3>
-        🎮 Salon ${room.code}
-      </h3>
-
-      <p>
-        👑 Créateur :
-        ${room.host}
-      </p>
-
-      <p>
-        🎯 Mode :
-        ${
-          room.ranked
-            ? "Classé"
-            : "Normal"
-        }
-      </p>
-
-      <h4>Joueurs :</h4>
-
-      <div id="currentPlayers"></div>
-
-    </div>
-  `;
-
-  const playersContainer =
-    $("currentPlayers");
-
-  (
-    room.players || []
-  ).forEach((player) => {
-    const p =
-      document.createElement("p");
-
-    const pseudo =
-      typeof player === "string"
-        ? player
-        : player.pseudo;
-
-    p.textContent =
-      "👤 " + pseudo;
-
-    playersContainer.appendChild(p);
-  });
+.lobby-actions {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-
-/* =====================================
-   LISTE DES SALONS
-===================================== */
-
-function loadRooms() {
-  socket.emit("getRooms");
+.join-room {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
 }
 
-socket.on(
-  "roomsList",
-  (rooms) => {
-    if (currentRoomCode) return;
+.join-room input,
+.friend-search input,
+.admin-card input,
+.admin-card select,
+.admin-card textarea,
+.settings-card input {
+  background: #101010;
+  color: white;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 11px 13px;
+  outline: none;
+}
 
-    const container =
-      $("roomsList");
+.join-room input {
+  width: 260px;
+}
 
-    if (!container) return;
+.rooms-list {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0;
+}
 
-    if (!rooms.length) {
-      container.textContent =
-        "Aucune partie disponible.";
+.room-card {
+  padding: 17px;
+  border: 1px solid #393939;
+  border-radius: 12px;
+  background: #141414;
+}
 
-      return;
-    }
+/* =========================================================
+   CARTES
+========================================================= */
 
-    container.innerHTML = "";
+.cards-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 17px;
+}
 
-    rooms.forEach((room) => {
-      const card =
-        document.createElement("div");
+.card,
+.class-card,
+.quest-card,
+.friend-card,
+.ranking-card,
+.shop-card {
+  padding: 20px;
+  border-radius: 13px;
+  border: 1px solid #3d3d3d;
+  background:
+    linear-gradient(145deg, #1a1a1a, #101010);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
 
-      card.className =
-        "room-card";
+.card h3,
+.class-card h3,
+.quest-card h3,
+.friend-card h3,
+.shop-card h3 {
+  color: #e7cb95;
+  margin-bottom: 10px;
+}
 
-      card.innerHTML = `
-        <strong>
-          🎮 ${room.code}
-        </strong>
+.card p,
+.class-card p,
+.quest-card p,
+.friend-card p,
+.shop-card p {
+  color: #999;
+  line-height: 1.5;
+}
 
-        <p>
-          👑 ${room.host}
-        </p>
-
-        <p>
-          👥 ${room.players.length}/8
-        </p>
-
-        <p>
-          ${
-            room.ranked
-              ? "🏆 Classé"
-              : "🎮 Normal"
-          }
-        </p>
-
-        <button>
-          Rejoindre
-        </button>
-      `;
-
-      card
-        .querySelector("button")
-        .addEventListener(
-          "click",
-          () => {
-            socket.emit(
-              "joinRoom",
-              {
-                code: room.code,
-
-                pseudo:
-                  currentUser.pseudo
-              }
-            );
-          }
-        );
-
-      container.appendChild(card);
-    });
-  }
-);
-
-
-/* =====================================
+/* =========================================================
    AMIS
-===================================== */
+========================================================= */
 
-async function loadFriends() {
-  if (!currentUser) return;
-
-  const container =
-    $("friendsList");
-
-  if (!container) return;
-
-  container.textContent =
-    "Chargement...";
-
-  try {
-    const { response, data } =
-      await getJSON(
-        "/api/friends/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    if (!response.ok) {
-      container.textContent =
-        "❌ Impossible de charger.";
-
-      return;
-    }
-
-    friendsData =
-      data.friends || [];
-
-    renderFriends();
-
-  } catch {
-    container.textContent =
-      "❌ Erreur.";
-  }
+.friend-search {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 25px;
 }
 
-function renderFriends() {
-  const container =
-    $("friendsList");
-
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  if (!friendsData.length) {
-    container.textContent =
-      "Tu n'as pas encore d'amis.";
-
-    return;
-  }
-
-  friendsData.forEach((friend) => {
-    const card =
-      document.createElement("div");
-
-    card.className =
-      "friend-card";
-
-    const online =
-      friend.online === true;
-
-    const inGame =
-      friend.inGame === true;
-
-    card.innerHTML = `
-      <strong>
-        ${friend.icon || "🐺"}
-        ${friend.pseudo}
-      </strong>
-
-      <p>
-        ${
-          online
-            ? "🟢 En ligne"
-            : "⚫ Hors ligne"
-        }
-      </p>
-
-      <p>
-        ${
-          inGame
-            ? "🎮 En partie"
-            : ""
-        }
-      </p>
-
-      ${
-        online &&
-        !inGame &&
-        currentRoomCode
-
-          ? `
-            <button class="inviteFriend">
-              Inviter
-            </button>
-          `
-
-          : ""
-      }
-    `;
-
-    const button =
-      card.querySelector(
-        ".inviteFriend"
-      );
-
-    if (button) {
-      button.addEventListener(
-        "click",
-        () => {
-          socket.emit(
-            "inviteFriend",
-            {
-              from:
-                currentUser.pseudo,
-
-              to:
-                friend.pseudo,
-
-              code:
-                currentRoomCode
-            }
-          );
-        }
-      );
-    }
-
-    container.appendChild(card);
-  });
+.friend-search input {
+  width: 300px;
 }
 
-
-/* =====================================
-   INVITATION AMI
-===================================== */
-
-socket.on(
-  "gameInvitation",
-  (invitation) => {
-    const accept =
-      confirm(
-        invitation.from +
-        " t'invite dans une partie.\n\nAccepter ?"
-      );
-
-    socket.emit(
-      "answerGameInvitation",
-      {
-        from:
-          invitation.from,
-
-        to:
-          currentUser.pseudo,
-
-        code:
-          invitation.code,
-
-        accepted:
-          accept
-      }
-    );
-  }
-);
-
-
-/* =====================================
-   CLASSEMENT
-===================================== */
-
-async function loadRanking() {
-  const container =
-    $("rankingList");
-
-  if (!container) return;
-
-  container.textContent =
-    "Chargement...";
-
-  try {
-    const { response, data } =
-      await getJSON(
-        "/api/ranking"
-      );
-
-    if (!response.ok) {
-      container.textContent =
-        "❌ Impossible de charger.";
-
-      return;
-    }
-
-    container.innerHTML = "";
-
-    (
-      data.users || []
-    ).forEach((user, index) => {
-      const card =
-        document.createElement("div");
-
-      card.className =
-        "ranking-card";
-
-      card.innerHTML = `
-        <strong>
-          #${index + 1}
-          ${user.icon || "🐺"}
-          ${user.pseudo}
-        </strong>
-
-        <p>
-          🏆 ${user.trophies || 0}
-        </p>
-
-        <p>
-          ${user.rank || "Bois"}
-        </p>
-      `;
-
-      container.appendChild(card);
-    });
-
-  } catch {
-    container.textContent =
-      "❌ Erreur.";
-  }
+.friend-status {
+  margin: 10px 0;
+  color: #aaa;
 }
 
+/* =========================================================
+   PARAMÈTRES
+========================================================= */
 
-/* =====================================
-   BOUTIQUE
-===================================== */
-
-async function loadShop() {
-  const container =
-    $("shopList");
-
-  if (!container) return;
-
-  try {
-    const { response, data } =
-      await getJSON(
-        "/api/shop/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    if (!response.ok) return;
-
-    container.innerHTML = "";
-
-    (
-      data.items || []
-    ).forEach((item) => {
-      const card =
-        document.createElement("div");
-
-      card.className =
-        "shop-card";
-
-      card.innerHTML = `
-        <h3>${item.name}</h3>
-
-        <p>
-          🐺 ${item.price}
-        </p>
-
-        <button>Acheter</button>
-      `;
-
-      card
-        .querySelector("button")
-        .addEventListener(
-          "click",
-          async () => {
-            try {
-              const result =
-                await postJSON(
-                  "/api/shop/buy",
-                  {
-                    pseudo:
-                      currentUser.pseudo,
-
-                    itemId:
-                      item.id
-                  }
-                );
-
-              alert(
-                result.data.message
-              );
-
-              if (
-                result.response.ok &&
-                result.data.user
-              ) {
-                currentUser =
-                  result.data.user;
-
-                saveCurrentUser();
-                updateProfile();
-              }
-
-            } catch {
-              alert(
-                "❌ Erreur."
-              );
-            }
-          }
-        );
-
-      container.appendChild(card);
-    });
-
-  } catch {
-    container.textContent =
-      "❌ Erreur.";
-  }
+.settings-card {
+  max-width: 750px;
+  margin-bottom: 22px;
+  padding: 22px;
+  border-radius: 13px;
+  border: 1px solid #3d3d3d;
+  background: #121212;
 }
 
+.settings-card h3 {
+  margin-bottom: 15px;
+  color: #e4c994;
+}
 
-/* =====================================
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-card.danger {
+  border-color: #662626;
+}
+
+.settings-card input {
+  max-width: 420px;
+}
+
+/* =========================================================
+   ADMIN
+========================================================= */
+
+.admin-card {
+  max-width: 900px;
+  margin-bottom: 22px;
+  padding: 23px;
+  border-radius: 14px;
+  border: 1px solid #4a3b26;
+  background:
+    linear-gradient(145deg, #1b1710, #111111);
+}
+
+.admin-card h3 {
+  color: #e7c77f;
+  margin-bottom: 17px;
+}
+
+.admin-card input,
+.admin-card select {
+  min-width: 230px;
+}
+
+.admin-card textarea {
+  width: 100%;
+  max-width: 700px;
+  min-height: 130px;
+  resize: vertical;
+}
+
+.admin-card button {
+  margin-top: 12px;
+}
+
+#adminPlayerResult {
+  margin-top: 15px;
+}
+
+#adminMessage {
+  margin-top: 12px;
+  color: #e5bf76;
+}
+
+/* =========================================================
    LUNE DE SANG
-===================================== */
+========================================================= */
 
-async function loadEventStatus() {
-  try {
-    const { data } =
-      await getJSON(
-        "/api/event/bloodmoon"
-      );
+.blood-moon-content {
+  min-height: 400px;
+  padding: 30px;
+  border: 1px solid #6e2525;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 75% 25%, rgba(150, 20, 20, 0.28), transparent 30%),
+    linear-gradient(145deg, #1b0909, #090909);
+}
 
-    eventData = data;
+.blood-moon-timer {
+  position: fixed;
+  top: 18px;
+  left: 18px;
+  z-index: 200;
+  padding: 10px 15px;
+  border-radius: 9px;
+  border: 1px solid #742929;
+  background: rgba(20, 5, 5, 0.95);
+  color: #efc983;
+  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.5);
+}
 
-    if (data.active) {
-      show("bloodMoonButton");
-      show("bloodMoonTimer");
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
 
-      showMessage(
-        "bloodMoonTimer",
-        data.timeRemaining ||
-        "Événement Lune de Sang"
-      );
+#notifications {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: min(380px, calc(100% - 40px));
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-      document.body.classList.add(
-        "blood-moon-active"
-      );
+.notification {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #60452b;
+  background: rgba(20, 20, 20, 0.97);
+  color: white;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.6);
+}
 
-    } else {
-      hide("bloodMoonButton");
-      hide("bloodMoonTimer");
+.notification button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: 1px solid #805d30;
+  border-radius: 7px;
+  background: #382716;
+  color: #f1d09a;
+}
 
-      document.body.classList.remove(
-        "blood-moon-active"
-      );
-    }
+/* =========================================================
+   CHARGEMENT
+========================================================= */
 
-  } catch {
-    hide("bloodMoonButton");
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle, rgba(80, 15, 15, 0.55), rgba(0, 0, 0, 0.97));
+}
+
+.loading-box {
+  text-align: center;
+}
+
+.loading-icon {
+  font-size: 70px;
+  margin-bottom: 20px;
+  animation: pulse 1.3s infinite;
+}
+
+.loading-box h2 {
+  color: #e7cc98;
+  margin-bottom: 20px;
+}
+
+.loading-spinner {
+  width: 45px;
+  height: 45px;
+  margin: auto;
+  border: 4px solid #333;
+  border-top-color: #a53b3b;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-async function loadBloodMoon() {
-  const container =
-    $("bloodMoonContent");
-
-  if (!container) return;
-
-  try {
-    const { data } =
-      await getJSON(
-        "/api/bloodmoon/" +
-        encodeURIComponent(
-          currentUser.pseudo
-        )
-      );
-
-    container.innerHTML = `
-      <h2>
-        🌕 Lune de Sang
-      </h2>
-
-      <p>
-        Progression :
-        ${data.progress || 0}/4
-      </p>
-
-      <div class="blood-moon-gauge">
-        <div
-          style="
-            width:
-            ${
-              Math.min(
-                100,
-                (
-                  data.progress || 0
-                ) * 25
-              )
-            }%
-          "
-        ></div>
-      </div>
-
-      <p>
-        Prochaine récompense :
-        ${data.nextReward || "Titre exclusif"}
-      </p>
-    `;
-
-  } catch {
-    container.textContent =
-      "❌ Impossible de charger.";
+@keyframes pulse {
+  50% {
+    transform: scale(1.1);
+    opacity: 0.65;
   }
 }
 
+/* =========================================================
+   MODE LUNE DE SANG
+========================================================= */
 
-/* =====================================
-   ADMIN - CLASSES
-===================================== */
-
-async function loadAdminClasses() {
-  if (!classesData.length) {
-    await loadClasses();
-  }
-
-  const select =
-    $("adminClassSelect");
-
-  if (!select) return;
-
-  select.innerHTML =
-    `<option value="">
-      Choisir une classe
-    </option>`;
-
-  classesData.forEach((classe) => {
-    const option =
-      document.createElement("option");
-
-    option.value =
-      classe.id;
-
-    option.textContent =
-      getClassEmoji(classe.id) +
-      " " +
-      classe.name;
-
-    select.appendChild(option);
-  });
+body.blood-moon-active {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(145, 15, 15, 0.55), transparent 45%),
+    linear-gradient(135deg, #170404, #080808 70%);
 }
 
+body.blood-moon-active .top-bar {
+  border-bottom-color: #762222;
+}
 
-/* =====================================
-   ADMIN - RECHERCHE
-===================================== */
+/* =========================================================
+   RESPONSIVE
+========================================================= */
 
-$("adminSearchButton")?.addEventListener(
-  "click",
-  async () => {
-    const pseudo =
-      $("adminPlayerSearch")
-        ?.value
-        .trim();
+@media (max-width: 850px) {
 
-    if (!pseudo) return;
-
-    try {
-      const { response, data } =
-        await getJSON(
-          "/api/admin/users/" +
-          encodeURIComponent(pseudo) +
-          "?adminPseudo=" +
-          encodeURIComponent(
-            currentUser.pseudo
-          )
-        );
-
-      if (!response.ok) {
-        showMessage(
-          "adminPlayerResult",
-          "❌ " + data.message
-        );
-
-        selectedAdminUser = null;
-
-        return;
-      }
-
-      selectedAdminUser =
-        data.user;
-
-      showMessage(
-        "adminPlayerResult",
-        "👤 " +
-        data.user.pseudo +
-        " | 🐺 " +
-        data.user.coins +
-        " | ✨ " +
-        data.user.xp +
-        " | 🏆 " +
-        data.user.trophies
-      );
-
-    } catch {
-      showMessage(
-        "adminPlayerResult",
-        "❌ Erreur."
-      );
-    }
+  .top-bar {
+    flex-direction: column;
+    align-items: flex-start;
   }
-);
 
-
-/* =====================================
-   ADMIN - RÉCOMPENSE
-===================================== */
-
-$("adminGiveButton")?.addEventListener(
-  "click",
-  async () => {
-    if (!selectedAdminUser) {
-      showMessage(
-        "adminMessage",
-        "❌ Recherche un joueur."
-      );
-
-      return;
-    }
-
-    const type =
-      $("adminRewardType")?.value;
-
-    const amount =
-      Number(
-        $("adminAmount")?.value || 0
-      );
-
-    const classId =
-      $("adminClassSelect")?.value ||
-      "";
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/admin/reward",
-          {
-            adminPseudo:
-              currentUser.pseudo,
-
-            targetPseudo:
-              selectedAdminUser.pseudo,
-
-            type,
-
-            amount,
-
-            classId
-          }
-        );
-
-      showMessage(
-        "adminMessage",
-        (
-          response.ok
-            ? "✅ "
-            : "❌ "
-        ) +
-        data.message
-      );
-
-    } catch {
-      showMessage(
-        "adminMessage",
-        "❌ Erreur."
-      );
-    }
+  .menu-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
-);
 
-
-/* =====================================
-   ADMIN - RÉCOMPENSE À TOUS
-===================================== */
-
-$("adminGiveAllButton")?.addEventListener(
-  "click",
-  async () => {
-    const type =
-      $("adminAllRewardType")?.value;
-
-    const amount =
-      Number(
-        $("adminAllAmount")?.value || 0
-      );
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/admin/reward-all",
-          {
-            adminPseudo:
-              currentUser.pseudo,
-
-            type,
-
-            amount
-          }
-        );
-
-      showMessage(
-        "adminAllMessage",
-        (
-          response.ok
-            ? "✅ "
-            : "❌ "
-        ) +
-        data.message
-      );
-
-    } catch {
-      showMessage(
-        "adminAllMessage",
-        "❌ Erreur."
-      );
-    }
-  }
-);
-
-
-/* =====================================
-   ANNONCE ADMIN
-===================================== */
-
-async function loadAnnouncement() {
-  const container =
-    $("announcementBox");
-
-  if (!container) return;
-
-  try {
-    const { data } =
-      await getJSON(
-        "/api/announcement"
-      );
-
-    container.textContent =
-      data.text ||
-      "";
-
-  } catch {
-    container.textContent =
-      "";
+  .player-stats {
+    width: 100%;
   }
 }
 
-$("saveAnnouncementButton")?.addEventListener(
-  "click",
-  async () => {
-    const text =
-      $("announcementInput")
-        ?.value || "";
+@media (max-width: 560px) {
 
-    try {
-      await postJSON(
-        "/api/admin/announcement",
-        {
-          adminPseudo:
-            currentUser.pseudo,
-
-          text
-        }
-      );
-
-      loadAnnouncement();
-
-    } catch {
-      alert("❌ Erreur.");
-    }
-  }
-);
-
-
-/* =====================================
-   PARAMÈTRES - EMAIL
-===================================== */
-
-$("changeEmailButton")?.addEventListener(
-  "click",
-  async () => {
-    const email =
-      $("newEmail").value.trim();
-
-    const password =
-      $("emailPassword").value;
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/account/email",
-          {
-            pseudo:
-              currentUser.pseudo,
-
-            email,
-            password
-          }
-        );
-
-      alert(data.message);
-
-      if (
-        response.ok &&
-        data.user
-      ) {
-        currentUser =
-          data.user;
-
-        saveCurrentUser();
-      }
-
-    } catch {
-      alert("❌ Erreur.");
-    }
-  }
-);
-
-
-/* =====================================
-   SUPPRIMER COMPTE
-===================================== */
-
-$("deleteAccountButton")?.addEventListener(
-  "click",
-  async () => {
-    const password =
-      $("deletePassword").value;
-
-    if (!password) {
-      alert(
-        "❌ Entre ton mot de passe."
-      );
-
-      return;
-    }
-
-    if (
-      !confirm(
-        "Supprimer définitivement ton compte ?"
-      )
-    ) {
-      return;
-    }
-
-    try {
-      const { response, data } =
-        await postJSON(
-          "/api/account/delete",
-          {
-            pseudo:
-              currentUser.pseudo,
-
-            password
-          }
-        );
-
-      if (!response.ok) {
-        alert(data.message);
-        return;
-      }
-
-      alert("Compte supprimé.");
-
-      logout();
-
-    } catch {
-      alert("❌ Erreur.");
-    }
-  }
-);
-
-
-/* =====================================
-   DÉCONNEXION
-===================================== */
-
-function logout() {
-  if (currentUser) {
-    socket.emit(
-      "userOffline",
-      {
-        pseudo:
-          currentUser.pseudo
-      }
-    );
+  .auth-box {
+    padding: 25px 18px;
   }
 
-  localStorage.removeItem(
-    "lgv7_user"
-  );
+  .auth-box h1 {
+    font-size: 29px;
+  }
 
-  currentUser = null;
-  currentRoomCode = null;
-  isRoomHost = false;
-  selectedAdminUser = null;
+  .menu-grid {
+    grid-template-columns: 1fr;
+    width: calc(100% - 25px);
+  }
 
-  hide("menuScreen");
-  hide("forgotScreen");
+  .page {
+    width: calc(100% - 25px);
+  }
 
-  show("authScreen");
+  .join-room,
+  .friend-search {
+    flex-direction: column;
+  }
 
-  hidePages();
+  .join-room input,
+  .friend-search input {
+    width: 100%;
+  }
 
-  showLogin();
+  .cards-list {
+    grid-template-columns: 1fr;
+  }
 }
-
-$("logoutButton")?.addEventListener(
-  "click",
-  logout
-);
-
-
-/* =====================================
-   MOT DE PASSE OUBLIÉ
-===================================== */
-
-$("forgotPasswordButton")?.addEventListener(
-  "click",
-  () => {
-    hide("authScreen");
-    show("forgotScreen");
-
-    showMessage(
-      "forgotMessage",
-      ""
-    );
-  }
-);
-
-$("backToLoginButton")?.addEventListener(
-  "click",
-  () => {
-    hide("forgotScreen");
-    show("authScreen");
-  }
-);
-
-$("sendResetButton")?.addEventListener(
-  "click",
-  async () => {
-    const pseudo =
-      $("forgotPseudo")
-        .value
-        .trim();
-
-    try {
-      const { data } =
-        await postJSON(
-          "/api/password/forgot",
-          {
-            pseudo
-          }
-        );
-
-      showMessage(
-        "forgotMessage",
-        data.message
-      );
-
-    } catch {
-      showMessage(
-        "forgotMessage",
-        "❌ Erreur."
-      );
-    }
-  }
-);
-
-
-/* =====================================
-   SESSION
-===================================== */
-
-window.addEventListener(
-  "load",
-  () => {
-    const saved =
-      localStorage.getItem(
-        "lgv7_user"
-      );
-
-    if (!saved) return;
-
-    try {
-      const user =
-        JSON.parse(saved);
-
-      if (
-        !user ||
-        !user.pseudo
-      ) {
-        throw new Error(
-          "Session invalide"
-        );
-      }
-
-      loginUser(user);
-
-    } catch {
-      localStorage.removeItem(
-        "lgv7_user"
-      );
-    }
-  }
-);
