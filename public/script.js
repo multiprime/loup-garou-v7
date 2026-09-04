@@ -828,6 +828,8 @@ socket.on(
 
     $("startGameButton")
       ?.classList.remove("hidden");
+    $("startGameWithBotsButton")
+      ?.classList.remove("hidden");
 
     renderCurrentRoom(room);
 
@@ -896,6 +898,8 @@ socket.on(
     if (isRoomHost) {
       $("startGameButton")
         ?.classList.remove("hidden");
+      $("startGameWithBotsButton")
+        ?.classList.remove("hidden");
     } else {
       $("startGameButton")
         ?.classList.add("hidden");
@@ -925,8 +929,12 @@ socket.on(
       if (isRoomHost) {
         $("startGameButton")
           ?.classList.remove("hidden");
+        $("startGameWithBotsButton")
+          ?.classList.remove("hidden");
       } else {
         $("startGameButton")
+          ?.classList.add("hidden");
+        $("startGameWithBotsButton")
           ?.classList.add("hidden");
       }
     }
@@ -980,10 +988,76 @@ $("startGameButton")?.addEventListener(
   }
 );
 
+$("startGameWithBotsButton")?.addEventListener(
+  "click",
+  () => {
+    if (!currentUser || !currentRoomCode || !isRoomHost) {
+      alert("❌ Seul le créateur peut lancer cette partie.");
+      return;
+    }
+
+    socket.emit("startGameWithBots", {
+      code: currentRoomCode,
+      pseudo: currentUser.pseudo
+    });
+  }
+);
+
+socket.on(
+  "playerSearchStarted",
+  ({ duration = 10000 } = {}) => {
+    document.body.dataset.lgPhase="search";
+    const container = $("roomsList");
+    if (!container) return;
+
+    let remaining = Math.ceil(duration / 1000);
+    container.innerHTML = `
+      <div class="room-card">
+        <h2>🔎 Recherche de joueurs...</h2>
+        <p>Recherche pendant <strong id="searchCountdown">${remaining}s</strong>.</p>
+        <p>Les places manquantes seront complétées par des bots.</p>
+      </div>
+    `;
+
+    const timer = setInterval(() => {
+      remaining--;
+      const countdown = $("searchCountdown");
+      if (countdown) countdown.textContent = `${Math.max(remaining, 0)}s`;
+      if (remaining <= 0) clearInterval(timer);
+    }, 1000);
+  }
+);
+
+socket.on(
+  "botLoadingStarted",
+  ({ duration = 10000 } = {}) => {
+    document.body.dataset.lgPhase="loading";
+    const container = $("roomsList");
+    if (!container) return;
+
+    let remaining = Math.ceil(duration / 1000);
+    container.innerHTML = `
+      <div class="room-card">
+        <h2>🤖 Préparation des bots...</h2>
+        <p>La partie commence dans <strong id="botCountdown">${remaining}s</strong>.</p>
+      </div>
+    `;
+
+    const timer = setInterval(() => {
+      remaining--;
+      const countdown = $("botCountdown");
+      if (countdown) countdown.textContent = `${Math.max(remaining, 0)}s`;
+      if (remaining <= 0) clearInterval(timer);
+    }, 1000);
+  }
+);
+
 socket.on(
   "gameStarted",
   (game) => {
     $("startGameButton")
+      ?.classList.add("hidden");
+    $("startGameWithBotsButton")
       ?.classList.add("hidden");
 
     const container =
@@ -1015,13 +1089,11 @@ socket.on(
         ? game.players
         : [];
 
-    players.forEach((pseudo) => {
-      const player =
-        document.createElement("p");
-
-      player.textContent =
-        "👤 " + pseudo;
-
+    players.forEach((entry) => {
+      const player = document.createElement("p");
+      const pseudo = typeof entry === "string" ? entry : entry?.pseudo;
+      const isBot = typeof entry === "object" && entry?.isBot;
+      player.textContent = `${isBot ? "🤖" : "👤"} ${pseudo || "Joueur"}`;
       playersContainer.appendChild(player);
     });
 
@@ -1071,12 +1143,14 @@ function renderCurrentRoom(room) {
       ? room.players
       : [];
 
-  players.forEach((pseudo) => {
+  players.forEach((entry) => {
     const player =
       document.createElement("p");
+    const pseudo = typeof entry === "string" ? entry : entry?.pseudo;
+    const isBot = typeof entry === "object" && entry?.isBot;
 
     player.textContent =
-      "👤 " + pseudo;
+      (isBot ? "🤖 " : "👤 ") + (pseudo || "Joueur");
 
     playersContainer.appendChild(player);
   });
@@ -1567,6 +1641,10 @@ $("adminGiveButton")
         xp = amount;
       }
 
+      if (rewardType === "trophies") {
+        trophies = amount;
+      }
+
       if (rewardType === "level") {
         xp = amount * 500;
       }
@@ -2005,3 +2083,148 @@ window.addEventListener(
     }
   }
 );
+/* =====================================================
+   V8 — FONCTIONS COMPLÉMENTAIRES / GAMEPLAY COMPLET
+===================================================== */
+
+let myGameRole = null;
+let myGameClassChance = 0;
+let currentChatFriend = null;
+
+["shopPage","bloodMoonPage"].forEach((id)=>{if(!pages.includes(id))pages.push(id);});
+
+function esc(value){const d=document.createElement("div");d.textContent=String(value??"");return d.innerHTML;}
+function apiJson(url, options={}){return fetch(url,options).then(async r=>{const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||"Erreur serveur");return d;});}
+
+/* MENU */
+$("shopButton")?.addEventListener("click",async()=>{openPage("shopPage");await loadShopV8();});
+$("bloodMoonButton")?.addEventListener("click",async()=>{openPage("bloodMoonPage");await loadBloodMoonV8();});
+
+async function refreshBloodMoonButton(){
+  if(!currentUser)return;
+  try{const d=await apiJson(`/api/blood-moon?pseudo=${encodeURIComponent(currentUser.pseudo)}`);document.body.classList.toggle("blood-moon-active",Boolean(d.event.active));const b=$("bloodMoonButton");if(!b)return;b.classList.toggle("hidden",!d.event.active);updateBloodMoonTimer(d.event);}
+  catch{}
+}
+function updateBloodMoonTimer(event){
+  const el=$("bloodMoonTimer");if(!el)return;
+  if(!event?.active||!event.endsAt){el.classList.add("hidden");return;}
+  el.classList.remove("hidden");
+  const tick=()=>{const left=Math.max(0,event.endsAt-Date.now());const h=Math.floor(left/3600000),m=Math.floor(left%3600000/60000),s=Math.floor(left%60000/1000);el.textContent=`🌕 Lune de Sang : ${h}h ${String(m).padStart(2,"0")}m ${String(s).padStart(2,"0")}s`;if(left<=0){el.classList.add("hidden");refreshBloodMoonButton();}};tick();clearInterval(window._bmTimer);window._bmTimer=setInterval(tick,1000);
+}
+
+/* QUÊTES */
+loadQuests = async function(){
+  const c=$("questsList");if(!c||!currentUser)return;c.textContent="Chargement...";
+  try{const d=await apiJson(`/api/quests?pseudo=${encodeURIComponent(currentUser.pseudo)}`);renderQuests(d.quests||[]);}catch(e){c.textContent="❌ "+e.message;}
+};
+renderQuests = function(quests){
+  const c=$("questsList");if(!c)return;c.innerHTML="";
+  quests.forEach(q=>{const card=document.createElement("div");card.className="quest-card";const pct=Math.min(100,Math.round(q.progress/q.target*100));card.innerHTML=`<h3>${esc(q.title)}</h3><p>${esc(q.description)}</p><p>✨ ${q.xp} XP • 🪙 ${q.coins} pièces</p><div class="quest-progress"><div style="width:${pct}%"></div></div><p>${q.progress}/${q.target} ${q.claimed?"• ✅ Récupérée":""}</p>${q.completed&&!q.claimed?`<button class="main-button quest-claim" data-id="${esc(q.id)}">🎁 Récupérer</button>`:""}`;c.appendChild(card);});
+  c.querySelectorAll(".quest-claim").forEach(b=>b.addEventListener("click",async()=>{try{const d=await apiJson("/api/quests/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,questId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadQuests();}catch(e){alert("❌ "+e.message);}}));
+};
+
+/* AMIS + SALON */
+async function loadRoomFriendsV8(){
+  const c=$("roomFriends");if(!c||!currentUser)return;
+  try{const d=await apiJson(`/api/friends/${encodeURIComponent(currentUser.pseudo)}`);const friends=d.friends||[];c.innerHTML=`<h4>👥 Tes amis</h4>`+(friends.length?friends.map(f=>{const u=f.user||{};const can=Boolean(f.online&&!f.inRoom);return `<div class="room-friend"><span>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</span><small>${f.inRoom?"🎮 En partie":f.online?"🟢 En ligne":"⚫ Hors ligne"}</small>${can?`<button class="secondary-button invite-friend" data-pseudo="${esc(u.pseudo)}">Inviter</button>`:""}</div>`}).join(""):"<p>Aucun ami.</p>");c.querySelectorAll(".invite-friend").forEach(b=>b.addEventListener("click",()=>socket.emit("inviteFriendToRoom",{code:currentRoomCode,fromPseudo:currentUser.pseudo,toPseudo:b.dataset.pseudo})));}catch(e){c.textContent="❌ "+e.message;}
+}
+renderCurrentRoom = function(room){
+  document.body.dataset.lgPhase="salon";
+  const c=$("roomsList");if(!c)return;currentRoomCode=room.code;isRoomHost=room.host===currentUser?.pseudo;
+  c.innerHTML=`<div class="room-card room-main-card"><h3>🎮 Salon ${esc(room.code)}</h3><p>👑 ${esc(room.host)} • 👥 ${room.players.length}/8 ${room.ranked?"• 🏆 CLASSÉ":"• 🎮 NORMAL"}</p><div class="ranked-room-row"><label><input id="roomRankedToggle" type="checkbox" ${room.ranked?"checked":""} ${isRoomHost?"":"disabled"}> 🏆 Activer le mode classé</label></div><div id="currentPlayers"></div><div id="roomActions"></div></div>`;
+  const pc=$("currentPlayers");(room.players||[]).forEach(p=>{const d=document.createElement("div");d.className="room-player-row";d.textContent=`${p.isBot?"🤖":"👤"} ${p.pseudo}`;pc.appendChild(d);});
+  const a=$("roomActions");if(isRoomHost&&room.status==="waiting"){a.innerHTML=`<button id="roomStartOther" class="main-button">🐺 Lancer la partie avec d'autres joueurs</button><button id="roomStartBots" class="secondary-button">🤖 Lancer la partie avec bots</button>`;$("roomStartOther").onclick=()=>socket.emit("startGame",{code:room.code,pseudo:currentUser.pseudo});$("roomStartBots").onclick=()=>socket.emit("startGameWithBots",{code:room.code,pseudo:currentUser.pseudo});}
+  $("roomRankedToggle")?.addEventListener("change",(event)=>{if(isRoomHost)socket.emit("setRoomRanked",{code:room.code,pseudo:currentUser.pseudo,ranked:event.currentTarget.checked});});
+  loadRoomFriendsV8();
+};
+
+/* CLASSEMENT NORMAL / CLASSÉ */
+loadRanking = async function(){
+ const c=$("rankingList");if(!c||!currentUser)return;c.innerHTML=`<div class="ranking-tabs"><button id="normalRankTab" class="main-button">🏆 Trophées</button><button id="rankedRankTab" class="secondary-button">🥇 Classé</button></div><div id="rankingModeList">Chargement...</div>`;
+ const load=async(mode)=>{try{const d=await apiJson(`/api/ranking?mode=${mode}`);const list=$("rankingModeList");list.innerHTML=(d.users||[]).map((u,i)=>`<div class="ranking-card"><strong>#${i+1} ${esc(u.icon||"🐺")} ${esc(u.pseudo)}</strong><p>${mode==="ranked"?`🥇 ${esc(u.rankedRank)} • ${u.rankedPoints||0} points`:`🏆 ${u.trophies||0} trophée(s)`}</p><p>⭐ Niveau ${u.level||1} • ✨ ${u.xp||0} XP</p></div>`).join("")||"Aucun joueur.";}catch(e){$("rankingModeList").textContent="❌ "+e.message;}};
+ $("normalRankTab").onclick=()=>load("normal");$("rankedRankTab").onclick=()=>load("ranked");load("normal");
+};
+
+/* NOTIFICATIONS */
+function renderNotification(n){
+ const wrap=document.createElement("div");wrap.className="notification-card";wrap.innerHTML=`<strong>${esc(n.title)}</strong><p>${esc(n.message)}</p>`;
+ if(n.reward&&!n.claimed) {const b=document.createElement("button");b.className="main-button";b.textContent="Récupérer";b.onclick=async()=>{try{const d=await apiJson("/api/notifications/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,notificationId:n.id})});currentUser=d.user;saveCurrentUser();updateProfile();b.remove();}catch(e){alert("❌ "+e.message);}};wrap.appendChild(b);}
+ if(n.type==="roomInvite"&&n.action){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=()=>socket.emit("respondRoomInvite",{requestId:n.action.requestId,pseudo:currentUser.pseudo,accept:ok});wrap.appendChild(b);});}
+ if(n.type==="chatRequest"&&n.requestId){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=async()=>{try{await apiJson("/api/chat/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,requestId:n.requestId,accept:ok})});b.parentElement?.remove();}catch(e){alert("❌ "+e.message);}};wrap.appendChild(b);});}
+ return wrap;
+}
+async function loadNotificationsV8(){if(!currentUser)return;try{const d=await apiJson(`/api/notifications/${encodeURIComponent(currentUser.pseudo)}`);const c=$("notifications");if(!c)return;c.innerHTML="";(d.notifications||[]).slice(0,8).forEach(n=>c.appendChild(renderNotification(n)));}catch{}}
+socket.on("notification",n=>{const c=$("notifications");if(c)c.prepend(renderNotification(n));});
+socket.on("profileUpdated",u=>{if(currentUser&&u.pseudo===currentUser.pseudo){currentUser=u;saveCurrentUser();updateProfile();}});
+socket.on("roomInvitation",()=>loadNotificationsV8());
+socket.on("roomInviteResult",()=>loadNotificationsV8());
+
+/* ADMIN */
+async function loadAdminV8(){
+ if(!isAdmin())return;try{const d=await apiJson(`/api/admin/bootstrap?adminPseudo=${encodeURIComponent(currentUser.pseudo)}`);const uc=$("adminUsersList"),cc=$("adminClassesList"),sel=$("adminClassSelect"),selAll=$("adminAllClassSelect");
+  if(sel)sel.innerHTML=`<option value="">Choisir une classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");if(selAll)selAll.innerHTML=`<option value="">Aucune classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");
+  if(cc)cc.innerHTML=`<h4>🐺 Classes</h4>`+d.classes.map(x=>`<div class="admin-class-row"><b>${esc(x.name)}</b><span>${x.price} 🪙 • ${x.chance}%</span></div>`).join("");if(uc)uc.innerHTML=`<h4>👥 ${d.users.length} joueur(s)</h4>`+d.users.map(u=>`<div class="admin-user-row"><span>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</span><small>🪙${u.coins||0} • ✨${u.xp||0} • 🏆${u.trophies||0} • ${esc(u.rankedRank||"Bois")}</small><button class="secondary-button admin-select-user" data-pseudo="${esc(u.pseudo)}">Sélectionner</button></div>`).join("");uc?.querySelectorAll(".admin-select-user").forEach(b=>b.onclick=()=>{$("adminPlayerSearch").value=b.dataset.pseudo;$ ("adminSearchButton")?.click();});
+ }catch(e){$("adminMessage").textContent="❌ "+e.message;}
+}
+$("adminButton")?.addEventListener("click",()=>setTimeout(loadAdminV8,50));
+$("adminRewardType")?.addEventListener("change",()=>{});
+$("adminRewardAllButton")?.addEventListener("click",async()=>{if(!isAdmin())return;try{const d=await apiJson("/api/admin/reward-all-now",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminPseudo:currentUser.pseudo,coins:Number($("adminAllCoins")?.value||0),xp:Number($("adminAllXp")?.value||0),trophies:Number($("adminAllTrophies")?.value||0),classId:$("adminAllClassSelect")?.value||"",onlineOnly:Boolean($("adminOnlineOnly")?.checked)})});$("adminAllMessage").textContent="✅ "+d.message;loadAdminV8();}catch(e){$("adminAllMessage").textContent="❌ "+e.message;}});
+
+/* Récompense individuelle : trophées */
+const oldAdminGive=window._adminGiveV8;
+$("adminGiveButton")?.addEventListener("click",()=>{});
+// Le listener historique est conservé ; le serveur accepte désormais les récompenses en attente.
+
+/* CHAT */
+$("chatEnabledToggle")?.addEventListener("change",async()=>{try{const d=await apiJson("/api/settings/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,chatEnabled:$ ("chatEnabledToggle").checked})});currentUser=d.user;saveCurrentUser();}catch(e){alert("❌ "+e.message);}});
+
+/* BOUTIQUE */
+async function loadShopV8(){const c=$("shopList");if(!c||!currentUser)return;c.textContent="Chargement...";try{const d=await apiJson("/api/shop");c.innerHTML=(d.items||[]).map(i=>`<div class="shop-card"><h3>🛒 ${esc(i.name)}</h3><p>${esc(i.description||"")}</p><p>🪙 ${i.price}</p><button class="main-button shop-buy" data-id="${esc(i.id)}">Acheter</button></div>`).join("");c.querySelectorAll(".shop-buy").forEach(b=>b.onclick=async()=>{try{const d=await apiJson("/api/shop/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,itemId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadShopV8();}catch(e){alert("❌ "+e.message);}});}catch(e){c.textContent="❌ "+e.message;}}
+
+/* LUNE DE SANG */
+async function loadBloodMoonV8(){const c=$("bloodMoonContent");if(!c||!currentUser)return;c.textContent="Chargement...";try{const d=await apiJson(`/api/blood-moon?pseudo=${encodeURIComponent(currentUser.pseudo)}`);updateBloodMoonTimer(d.event);if(!d.event.active){c.innerHTML="<h3>🌑 L'événement est fermé.</h3><p>Il revient vendredi de 07h00 à 20h00.</p>";return;}const p=d.progress;c.innerHTML=`<div class="blood-moon-event"><div class="blood-ladder"><div class="blood-rung">🌕 100 🪙</div><div class="blood-rung">🌕 200 XP</div><div class="blood-rung">🌕 500 XP</div><div class="blood-rung final">🌕 ${esc(p.title)} — titre exclusif</div></div><div class="blood-gauge"><div class="blood-gauge-fill" style="height:${p.quarters*25}%"></div><strong>${p.quarters}/4</strong></div></div><h3>Quêtes spéciales</h3><div class="cards-list">${(p.quests||[]).map(q=>`<div class="quest-card"><h3>${esc(q.title)}</h3><p>${esc(q.description)}</p><p>${q.progress}/${q.target}</p>${q.completed&&!q.claimed?`<button class="main-button bm-q" data-id="${esc(q.id)}">🌕 Gagner un quart</button>`:""}</div>`).join("")}</div><p>Quarts : ${p.quarters}/4</p><div class="bm-rewards">${(p.milestones||[]).map(m=>`<div class="blood-rung"><b>Palier ${m.quarter}/4</b><br>${m.reward.coins?`🪙 ${m.reward.coins} pièces`:m.reward.xp?`✨ ${m.reward.xp} XP`:`🏷️ ${esc(m.reward.title)}`} ${p.quarters>=m.quarter&&!(p.claimed||[]).includes(m.quarter)?`<button class="main-button bm-claim" data-quarter="${m.quarter}">Récupérer</button>`:((p.claimed||[]).includes(m.quarter)?"✅ Récupéré":"🔒")}</div>`).join("")}</div><p>Bonus événement : x2 pièces • x2 XP • x2 trophées</p><h3>🏷️ Tes titres</h3><div class="title-list">${(currentUser.titles||[]).map(t=>`<button class="secondary-button title-equip" data-title="${esc(t)}">${esc(t)}${currentUser.equippedTitle===t?" ✓":""}</button>`).join("")}</div>`;c.querySelectorAll(".title-equip").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/titles/equip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,title:b.dataset.title})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-claim").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/blood-moon/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,quarter:Number(b.dataset.quarter)})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-q").forEach(b=>b.onclick=async()=>{try{await apiJson("/api/blood-moon/quest-claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,questId:b.dataset.id})});loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});}catch(e){c.textContent="❌ "+e.message;}}
+
+/* Socket gameplay */
+socket.on("yourRole",d=>{myGameRole=d.role;myGameClassChance=d.classChance||0;});
+socket.on("nightStarted",d=>renderGamePhaseV8("night",d));
+socket.on("dayStarted",d=>renderGamePhaseV8("day",d));
+socket.on("gameFinished",d=>{document.body.dataset.lgPhase="salon";const c=$("roomsList");if(c)c.innerHTML=`<div class="room-card game-result"><h2>🏁 Partie terminée</h2><h3>Victoire : ${esc(d.winner)}</h3><p>Retourne au menu ou recrée un salon.</p></div>`;loadNotificationsV8();});
+socket.on("seerResult",d=>alert(`🔮 ${d.target} est ${d.role}.`));
+socket.on("roleActionResult",d=>alert("🌙 "+d.message));
+socket.on("hunterActionRequired",d=>renderHunterChoicesV8(d));
+socket.on("hunterShot",d=>alert(`🏹 ${d.hunter} a éliminé ${d.target}.`));
+function renderGamePhaseV8(phase,data){const c=$("roomsList");if(!c)return;const players=(data.players||[]).filter(p=>p.alive);c.innerHTML=`<div class="room-card game-board"><h2>${phase==="night"?"🌙 Nuit":"☀️ Jour"} ${data.day||1}</h2><p>Ton rôle : <strong>${esc(myGameRole||"...")}</strong> • chance de classe : ${myGameClassChance}%</p><div class="game-players" id="gameTargets"></div><div id="gameActions"></div></div>`;const t=$("gameTargets");players.forEach(p=>{if(p.pseudo===currentUser.pseudo)return;const b=document.createElement("button");b.className="secondary-button game-target";b.textContent=`${p.isBot?"🤖":"👤"} ${p.pseudo}`;b.dataset.pseudo=p.pseudo;t.appendChild(b);});const a=$("gameActions");if(phase==="night"){if(myGameRole==="Loup-Garou")a.innerHTML='<p>Choisis une victime.</p>';if(myGameRole==="Voyante")a.innerHTML='<button id="seerBtn" class="main-button">🔮 Inspecter la cible sélectionnée</button>';if(myGameRole==="Sorcière")a.innerHTML='<button id="witchSave" class="main-button">🧪 Sauver la cible</button><button id="witchKill" class="secondary-button">☠️ Éliminer la cible</button>';t.querySelectorAll(".game-target").forEach(b=>b.onclick=()=>{const target=b.dataset.pseudo;if(myGameRole==="Loup-Garou")socket.emit("nightVote",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:target});if(myGameRole==="Voyante")$("seerBtn").dataset.target=target;if(myGameRole==="Sorcière"){$("witchSave").dataset.target=target;$("witchKill").dataset.target=target;}});$("seerBtn")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("seerBtn").dataset.target,action:"inspect"}));$("witchSave")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("witchSave").dataset.target,action:"save"}));$("witchKill")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("witchKill").dataset.target,action:"kill"}));}else{a.innerHTML='<p>Vote pour éliminer un joueur.</p>';t.querySelectorAll(".game-target").forEach(b=>b.onclick=()=>socket.emit("dayVote",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:b.dataset.pseudo}));}}
+function renderHunterChoicesV8(d){const c=$("roomsList");if(!c)return;c.innerHTML=`<div class="room-card"><h2>🏹 Pouvoir du Chasseur</h2><p>Choisis un joueur.</p><div id="hunterTargets"></div></div>`;const t=$("hunterTargets");(d.targets||[]).forEach(x=>{const b=document.createElement("button");b.className="main-button";b.textContent=x;b.onclick=()=>socket.emit("hunterAction",{code:currentRoomCode,pseudo:d.hunter,targetPseudo:x});t.appendChild(b);});}
+
+/* État salon / classé */
+socket.on("roomUpdated",room=>{if(currentRoomCode===room.code)renderCurrentRoom(room);});
+$("rankedModeToggle")?.addEventListener("change",()=>{if(currentRoomCode&&isRoomHost)socket.emit("setRoomRanked",{code:currentRoomCode,pseudo:currentUser.pseudo,ranked:$ ("rankedModeToggle").checked});});
+
+/* Connexion : initialisation V8 */
+const _loginUserV8=loginUser;
+loginUser=function(user){_loginUserV8(user);ensureV8AfterLogin();};
+function ensureV8AfterLogin(){if($("chatEnabledToggle"))$("chatEnabledToggle").checked=currentUser.chatEnabled!==false;loadNotificationsV8();refreshBloodMoonButton();if(isAdmin())loadAdminV8();}
+window.addEventListener("load",()=>setTimeout(ensureV8AfterLogin,250));
+setInterval(()=>{if(currentUser){refreshBloodMoonButton();if(currentRoomCode)loadRoomFriendsV8();}},30000);
+
+/* LISTE D'AMIS + CHAT */
+async function loadFriendsV8(){
+ const c=$("friendsList");if(!c||!currentUser)return;c.textContent="Chargement...";
+ try{const d=await apiJson(`/api/friends/${encodeURIComponent(currentUser.pseudo)}`);c.innerHTML="";(d.friends||[]).forEach(f=>{const u=f.user||{};const card=document.createElement("div");card.className="friend-card";card.innerHTML=`<h3>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</h3><p>${f.online?"🟢 En ligne":"⚫ Hors ligne"} • ${f.inRoom?"🎮 En partie":"🟢 Disponible"}</p><button class="secondary-button chat-request">💬 Demander le chat</button><button class="main-button chat-open">💬 Ouvrir le chat</button>`;card.querySelector(".chat-request").onclick=async()=>{try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:u.pseudo})});alert("✅ Demande envoyée.");}catch(e){alert("❌ "+e.message);}};card.querySelector(".chat-open").onclick=()=>openChatV8(u.pseudo);c.appendChild(card);});if(!d.friends?.length)c.textContent="Aucun ami.";}catch(e){c.textContent="❌ "+e.message;}
+}
+$("friendsButton")?.addEventListener("click",loadFriendsV8);
+async function openChatV8(friendPseudo){currentChatFriend=friendPseudo;const c=$("friendResult");if(!c)return;try{const status=await apiJson(`/api/chat/status/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);if(!status.allowed){if(!status.pending){if(!confirm("Le chat doit être accepté. Envoyer une demande ?"))return;try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo})});}catch(e){alert("❌ "+e.message);}}return;}const d=await apiJson(`/api/chat/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);c.innerHTML=`<div class="chat-box"><h3>💬 ${esc(friendPseudo)}</h3><div id="chatMessages">${(d.messages||[]).map(m=>`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`).join("")}</div><div class="chat-compose"><input id="chatInput" maxlength="500" placeholder="Ton message"><button id="chatSend" class="main-button">Envoyer</button></div></div>`;$("chatSend").onclick=async()=>{try{const x=await apiJson("/api/chat/send-safe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo,text:$("chatInput").value})});$("chatInput").value="";const m=$("chatMessages");m.insertAdjacentHTML("beforeend",`<p><b>${esc(x.message.from)} :</b> ${esc(x.message.text)}</p>`);}catch(e){alert("❌ "+e.message);}};}catch(e){alert("❌ "+e.message);}}
+socket.on("chatMessage",m=>{if(currentChatFriend&&normalizeClient(m.from)===normalizeClient(currentChatFriend)){const c=$("chatMessages");if(c)c.insertAdjacentHTML("beforeend",`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`);}});
+function normalizeClient(x){return String(x||"").trim().toLowerCase();}
+
+/* RÉCOMPENSE ADMIN : le type trophées */
+const rewardType=$("adminRewardType");rewardType?.addEventListener("change",()=>{const type=rewardType.value;const amount=$("adminAmountInput");if(type==="class"){$("adminAmountContainer")?.classList.add("hidden");$("adminClassContainer")?.classList.remove("hidden");}else{$("adminAmountContainer")?.classList.remove("hidden");$("adminClassContainer")?.classList.add("hidden");if(amount)amount.placeholder=type==="trophies"?"Nombre de trophées":"Quantité";}});
+
+/* ANNONCE ADMIN + MENU */
+async function loadAnnouncementV8(){try{const d=await apiJson("/api/announcement");if($("announcementBox"))$("announcementBox").textContent=d.text||"";if($("announcementInput"))$("announcementInput").value=d.text||"";}catch{}}
+$("saveAnnouncementButton")?.addEventListener("click",async()=>{if(!isAdmin())return;try{const d=await apiJson("/api/admin/announcement",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminPseudo:currentUser.pseudo,text:$("announcementInput").value})});$("adminMessage").textContent="✅ "+d.message;loadAnnouncementV8();}catch(e){$("adminMessage").textContent="❌ "+e.message;}});
+socket.on("announcementUpdated",d=>{if($("announcementBox"))$("announcementBox").textContent=d.text||"";});
+const _ensureV8=ensureV8AfterLogin;ensureV8AfterLogin=function(){_ensureV8();loadAnnouncementV8();};
+/* Demandes d'amis : accepter/refuser depuis la notification */
+const _renderNotificationV8=renderNotification;
+renderNotification=function(n){const el=_renderNotificationV8(n);if(n.type==="friendRequest"&&n.action){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=async()=>{try{await apiJson("/api/friends/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,requestId:n.action.requestId,accept:ok})});b.parentElement?.remove();loadFriendsV8();}catch(e){alert("❌ "+e.message);}};el.appendChild(b);});}return el;};
