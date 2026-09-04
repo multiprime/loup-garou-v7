@@ -223,8 +223,8 @@
           <b id="playerXp">0</b>
         </span>
 
-        <span>
-          🪙
+        <span class="coin-stat">
+          🐺
           <b id="playerCoins">0</b>
         </span>
 
@@ -242,7 +242,7 @@
 
     <div
       id="xpBarContainer"
-      class="xp-bar-container"
+      class="xp-bar-container hidden"
     >
 
       <div
@@ -452,8 +452,23 @@
         type="button"
         class="main-button hidden"
       >
-        🐺 Lancer la partie
+        🐺 Lancer la partie avec d'autres joueurs
       </button>
+
+      <button
+        id="startGameWithBotsButton"
+        type="button"
+        class="secondary-button hidden"
+      >
+        🤖 Lancer la partie avec bots
+      </button>
+
+      <label class="ranked-toggle">
+        <input id="rankedModeToggle" type="checkbox">
+        🏆 Mode classé
+      </label>
+
+      <div id="roomFriends" class="room-friends"></div>
 
     </section>
 
@@ -602,6 +617,16 @@
       </div>
 
 
+      <div class="settings-card">
+        <h3>💬 Chat entre amis</h3>
+        <label class="switch-row">
+          <input id="chatEnabledToggle" type="checkbox" checked>
+          <span>Autoriser le chat</span>
+        </label>
+        <p>Une demande doit être acceptée avant de discuter.</p>
+      </div>
+
+
       <div class="settings-card danger">
 
         <h3>⚠️ Supprimer le compte</h3>
@@ -722,6 +747,10 @@
             ✨ XP
           </option>
 
+          <option value="trophies">
+            🏆 Trophées
+          </option>
+
           <option value="level">
             ⭐ Niveau
           </option>
@@ -773,6 +802,23 @@
 
       </div>
 
+
+      <div class="admin-card">
+        <h3>🌐 Récompenser tous les joueurs</h3>
+        <input id="adminAllCoins" type="number" min="0" placeholder="Pièces">
+        <input id="adminAllXp" type="number" min="0" placeholder="XP">
+        <input id="adminAllTrophies" type="number" placeholder="Trophées">
+        <select id="adminAllClassSelect"><option value="">Aucune classe</option></select>
+        <label class="switch-row"><input id="adminOnlineOnly" type="checkbox"> Seulement les joueurs en ligne</label>
+        <button id="adminRewardAllButton" type="button" class="main-button">🎁 Envoyer à tous</button>
+        <p id="adminAllMessage"></p>
+      </div>
+
+      <div class="admin-card">
+        <h3>👥 Joueurs et classes</h3>
+        <div id="adminUsersList" class="cards-list"></div>
+        <div id="adminClassesList" class="cards-list"></div>
+      </div>
 
       <!-- ANNONCE -->
 
