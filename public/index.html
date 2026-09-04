@@ -225,7 +225,7 @@
         </span>
 
         <span class="coin-stat">
-          🐺
+          <span class="coin-icon" aria-label="Pièces"></span>
           <b id="playerCoins">0</b>
         </span>
 
@@ -237,22 +237,6 @@
       </div>
 
     </header>
-
-
-    <!-- BARRE XP -->
-
-    <div
-      id="xpBarContainer"
-      class="xp-bar-container hidden"
-    >
-
-      <div
-        id="xpProgress"
-        class="xp-progress"
-      ></div>
-
-    </div>
-
 
     <!-- ANNONCE -->
 
@@ -813,6 +797,13 @@
         <label class="switch-row"><input id="adminOnlineOnly" type="checkbox"> Seulement les joueurs en ligne</label>
         <button id="adminRewardAllButton" type="button" class="main-button">🎁 Envoyer à tous</button>
         <p id="adminAllMessage"></p>
+      </div>
+
+      <div class="admin-card">
+        <h3>🌕 Événement Lune de Sang</h3>
+        <p>Lance immédiatement l'événement pour 20 minutes.</p>
+        <button id="adminBloodMoonButton" type="button" class="main-button">🌕 Activer pendant 20 minutes</button>
+        <p id="adminBloodMoonMessage"></p>
       </div>
 
       <div class="admin-card">
