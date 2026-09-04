@@ -27,7 +27,10 @@ const ADMIN_PSEUDO =
   (process.env.ADMIN_PSEUDO || "creator2026")
     .toLowerCase();
 
-const DATA_DIR = process.env.DATA_DIR || __dirname;
+// Stockage persistant : sur Render, définissez DATA_DIR=/data sur le disque persistant.
+const DATA_DIR =
+  process.env.DATA_DIR ||
+  (process.env.RENDER ? "/data" : __dirname);
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_FILE = path.join(DATA_DIR, "data.json");
 
@@ -103,13 +106,19 @@ db.users.forEach(ensureUserState);
 function saveDatabase() {
   try {
     const tempFile = `${DATA_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), "utf8");
+    const json = JSON.stringify(db, null, 2);
+
+    // Écriture atomique : on évite de perdre data.json si le serveur
+    // s'arrête pendant une sauvegarde.
+    fs.writeFileSync(tempFile, json, "utf8");
     fs.renameSync(tempFile, DATA_FILE);
+
+    // Petite copie de secours du compte/la base.
+    try {
+      fs.writeFileSync(`${DATA_FILE}.bak`, json, "utf8");
+    } catch (_) {}
   } catch (error) {
-    console.error(
-      "Erreur sauvegarde :",
-      error
-    );
+    console.error("Erreur sauvegarde :", error);
   }
 }
 
@@ -466,7 +475,7 @@ function updateLevel(user) {
    NOTIFICATIONS
 ========================================= */
 
-const NOTIFICATION_TTL = 2 * 60 * 1000;
+const NOTIFICATION_TTL = 30 * 1000;
 
 function purgeExpiredNotifications() {
   const cutoff = Date.now() - NOTIFICATION_TTL;
@@ -676,30 +685,20 @@ function addBloodMoonQuarter(user){const st=getBloodMoonStatus();if(!st.active)r
 function bloodMoonPayload(user){const st=getBloodMoonStatus();const p=getBloodProgress(user,st.weekKey);const stats=p.stats||{};const quests=BLOOD_MOON_QUESTS.map(q=>({...q,progress:Math.min(q.target,Number(stats[q.stat]||0)),completed:Number(stats[q.stat]||0)>=q.target,claimed:(p.questClaims||[]).includes(q.id)}));return {event:st,quarters:Number(p.quarters||0),claimed:p.claimed||[],title:p.title||st.title,quests,milestones:[{quarter:1,reward:{coins:100}},{quarter:2,reward:{xp:200}},{quarter:3,reward:{xp:500}},{quarter:4,reward:{title:p.title||st.title}}]};}
 function registerBloodQuest(user,stat,amount=1){const st=getBloodMoonStatus();if(!st.active)return;const p=getBloodProgress(user,st.weekKey);p.stats=p.stats||{};p.stats[stat]=Number(p.stats[stat]||0)+Number(amount||0);}
 
-function normalizeChatForFilter(text){
-  return String(text||"")
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/[@4àáâä]/g,"a").replace(/[3èéêë]/g,"e")
-    .replace(/[1!ìíîï]/g,"i").replace(/[0òóôö]/g,"o")
-    .replace(/[5$]/g,"s").replace(/[7]/g,"t")
-    .replace(/[^a-z0-9]+/g," ").trim();
-}
-function chatContainsInsult(text){
-  const bad=[
-    "idiot","idiote","imbecile","connard","connasse","conne","con",
-    "pute","putain","salope","salaud","nique","niquer","fdp","fils de pute",
-    "merde","encule","enculer","batard","abruti","abrutie","cretin","cretine",
-    "bouffon","enfoire","tg","va te faire foutre","ferme ta gueule"
-  ];
-  const normalized=normalizeChatForFilter(text);
-  return bad.some(w=>normalized.split(" ").join("").includes(w.replace(/ /g,"")));
-}
 function filterChatText(text){
+  const bad=[
+    "idiot","idiote","imbecile","imbécile","connard","connasse","conne","con",
+    "pute","putain","salope","salaud","nique","niquer","fdp","fils de pute",
+    "merde","encule","enculé","enculer","batard","bâtard","batarde","bâtarde",
+    "abruti","abrutie","crétin","cretin","bouffon","enfoire","enfoiré","tg"
+  ];
   let out=String(text||"").trim().slice(0,500);
-  if(!out)return {ok:false,text:"",message:"Message vide."};
-  if(chatContainsInsult(out))return {ok:false,text:"",message:"❌ Message bloqué : les insultes ne sont pas autorisées dans le chat entre amis."};
-  return {ok:true,text:out,message:""};
+  for(const word of bad){
+    const normalized=word.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const pattern=normalized.split("").map(ch=>ch.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("[^a-zA-ZÀ-ÿ]*");
+    out=out.replace(new RegExp(pattern,"gi"),"•••");
+  }
+  return out;
 }
 
 function areFriends(a,b){return db.friendships.some(f=>(normalizePseudo(f.user1)===normalizePseudo(a)&&normalizePseudo(f.user2)===normalizePseudo(b))||(normalizePseudo(f.user2)===normalizePseudo(a)&&normalizePseudo(f.user1)===normalizePseudo(b)));}
@@ -898,8 +897,7 @@ function createGame(room) {
     "Loup-Garou",
     "Loup-Garou",
     "Voyante",
-    "Sorcière",
-    "Chasseur"
+    "Sorcière"
   ];
 
   const assignments = new Map();
@@ -936,6 +934,8 @@ function createGame(room) {
     phase: "night",
 
     day: 1,
+
+    chat: [],
 
     players:
       gamePlayers,
@@ -1214,6 +1214,31 @@ app.post(
     }
   }
 );
+
+
+
+/* =========================================
+   API : PROFIL ENREGISTRÉ
+   Permet de recharger les vraies données du
+   compte après un rafraîchissement/reconnexion.
+========================================= */
+app.get("/api/profile/:pseudo", (req, res) => {
+  try {
+    const user = findUser(req.params.pseudo);
+    if (!user) {
+      return res.status(404).json({ message: "Compte introuvable." });
+    }
+
+    updateLevel(user);
+    user.rank = getRank(user.trophies);
+    saveDatabase();
+
+    return res.json({ user: publicUser(user) });
+  } catch (error) {
+    console.error("Erreur profil :", error);
+    return res.status(500).json({ message: "Erreur serveur." });
+  }
+});
 
 
 /* =========================================
@@ -2294,9 +2319,9 @@ app.post("/api/chat/send",(req,res)=>{
   if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});
   const allowed=Array.isArray(from.chatAllowed)&&Array.isArray(to.chatAllowed)&&from.chatAllowed.includes(normalizePseudo(to.pseudo))&&to.chatAllowed.includes(normalizePseudo(from.pseudo));
   if(!allowed)return res.status(403).json({message:"Vous devez accepter la demande de chat."});
-  const checked=filterChatText(req.body.text);
-  if(!checked.ok)return res.status(400).json({message:checked.message});
-  const message={id:createId(),from:from.pseudo,to:to.pseudo,text:checked.text,createdAt:Date.now()};
+  const content=filterChatText(req.body.text);
+  if(!content)return res.status(400).json({message:"Message vide."});
+  const message={id:createId(),from:from.pseudo,to:to.pseudo,text:content,createdAt:Date.now()};
   db.messages.push(message); saveDatabase();
   const socketId=onlineUsers.get(normalizePseudo(to.pseudo));
   if(socketId)io.to(socketId).emit("friendMessage",message);
@@ -2344,30 +2369,12 @@ app.post(
 
 
 app.get("/api/chat/status/:pseudo/:friendPseudo",(req,res)=>{
-  const a=findUser(req.params.pseudo),b=findUser(req.params.friendPseudo);
-  if(!a||!b)return res.status(404).json({message:"Utilisateur introuvable."});
-  const mutual=Array.isArray(a.chatAllowed)&&Array.isArray(b.chatAllowed)&&a.chatAllowed.includes(normalizePseudo(b.pseudo))&&b.chatAllowed.includes(normalizePseudo(a.pseudo));
-  const pendingOutgoing=db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(a.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(b.pseudo));
-  const pendingIncoming=db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(b.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(a.pseudo));
-  const allowed=areFriends(a.pseudo,b.pseudo)&&a.chatEnabled!==false&&b.chatEnabled!==false&&mutual;
-  res.json({allowed,pending:pendingOutgoing||pendingIncoming,pendingOutgoing,pendingIncoming});
+  const a=findUser(req.params.pseudo),b=findUser(req.params.friendPseudo); if(!a||!b)return res.status(404).json({message:"Utilisateur introuvable."});
+  const allowed=areFriends(a.pseudo,b.pseudo)&&a.chatEnabled!==false&&b.chatEnabled!==false; const pending=db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(a.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(b.pseudo)); res.json({allowed,pending});
 });
 app.post("/api/chat/request",(req,res)=>{const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);if(!from||!to)return res.status(404).json({message:"Utilisateur introuvable."});if(!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Vous devez être amis."});if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});if(db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(from.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(to.pseudo)))return res.status(400).json({message:"Demande déjà envoyée."});const r={id:createId(),fromPseudo:from.pseudo,toPseudo:to.pseudo,type:"chat",createdAt:Date.now()};db.friendRequests.push(r);addNotification(to.pseudo,{title:"💬 Demande de chat",message:`${from.pseudo} souhaite discuter avec toi.`,type:"chatRequest",requestId:r.id});saveDatabase();res.json({message:"Demande de chat envoyée."});});
 app.post("/api/chat/respond",(req,res)=>{const r=db.friendRequests.find(x=>x.id===req.body.requestId&&x.type==="chat"&&normalizePseudo(x.toPseudo)===normalizePseudo(req.body.pseudo));if(!r)return res.status(404).json({message:"Demande introuvable."});db.friendRequests=db.friendRequests.filter(x=>x.id!==r.id);if(req.body.accept){const from=findUser(r.fromPseudo),to=findUser(r.toPseudo);from.chatAllowed=from.chatAllowed||[];to.chatAllowed=to.chatAllowed||[];if(!from.chatAllowed.includes(normalizePseudo(to.pseudo)))from.chatAllowed.push(normalizePseudo(to.pseudo));if(!to.chatAllowed.includes(normalizePseudo(from.pseudo)))to.chatAllowed.push(normalizePseudo(from.pseudo));addNotification(r.fromPseudo,{title:"💬 Chat accepté",message:`${r.toPseudo} a accepté ta demande de chat.`,type:"info"});}else{addNotification(r.fromPseudo,{title:"💬 Chat refusé",message:`${r.toPseudo} a refusé ta demande de chat.`,type:"info"});}saveDatabase();res.json({message:req.body.accept?"Chat accepté !":"Chat refusé."});});
-app.post("/api/chat/send-safe",(req,res)=>{
-  const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);
-  if(!from||!to||!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Le chat est réservé aux amis."});
-  if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});
-  const allowed=Array.isArray(from.chatAllowed)&&Array.isArray(to.chatAllowed)&&from.chatAllowed.includes(normalizePseudo(to.pseudo))&&to.chatAllowed.includes(normalizePseudo(from.pseudo));
-  if(!allowed)return res.status(403).json({message:"Vous devez accepter la demande de chat."});
-  const checked=filterChatText(req.body.text);
-  if(!checked.ok)return res.status(400).json({message:checked.message});
-  const msg={id:createId(),from:from.pseudo,to:to.pseudo,text:checked.text,createdAt:Date.now()};
-  db.messages.push(msg);saveDatabase();
-  const sid=onlineUsers.get(normalizePseudo(to.pseudo));
-  if(sid)io.to(sid).emit("chatMessage",msg);
-  res.json({message:msg});
-});
+app.post("/api/chat/send-safe",(req,res)=>{const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);if(!from||!to||!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Le chat est réservé aux amis."});if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});const allowed=Array.isArray(from.chatAllowed)&&Array.isArray(to.chatAllowed)&&from.chatAllowed.includes(normalizePseudo(to.pseudo))&&to.chatAllowed.includes(normalizePseudo(from.pseudo)); if(!allowed)return res.status(403).json({message:"Vous devez accepter la demande de chat."});const msg={id:createId(),from:from.pseudo,to:to.pseudo,text:filterChatText(req.body.text),createdAt:Date.now()};db.messages.push(msg);saveDatabase();const sid=onlineUsers.get(normalizePseudo(to.pseudo));if(sid)io.to(sid).emit("chatMessage",msg);res.json({message:msg});});
 app.post("/api/settings/chat",(req,res)=>{const u=findUser(req.body.pseudo);if(!u)return res.status(404).json({message:"Utilisateur introuvable."});u.chatEnabled=req.body.chatEnabled!==false;saveDatabase();res.json({message:"Paramètre du chat enregistré.",user:publicUser(u)});});
 
 const SHOP_ITEMS=[
@@ -2595,9 +2602,7 @@ function emitGameStart(room) {
       io.to(playerSocket).emit("yourRole", {
         role: player.role,
         classChance: player.classChance,
-        teammates: player.role === "Loup-Garou"
-          ? room.game.players.filter(x => x.role === "Loup-Garou" && x.pseudo !== player.pseudo).map(x => x.pseudo)
-          : []
+        teammates: []
       });
     }
   });
@@ -2623,7 +2628,7 @@ function emitPublicGameState(room,event="gameState"){
   const g=room.game;if(!g)return;
   const voters=g.phase==="night"?g.players.filter(p=>p.alive&&p.role==="Loup-Garou"):g.players.filter(p=>p.alive);
   const votes=g.phase==="night"?g.nightVotes||{}:g.dayVotes||{};
-  io.to(room.code).emit(event,{phase:g.phase,day:g.day,winner:g.winner,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),ranked:g.ranked,voteCount:Object.keys(votes).length,requiredVotes:voters.length});
+  io.to(room.code).emit(event,{phase:g.phase,day:g.day,winner:g.winner,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),ranked:g.ranked,voteCount:Object.keys(votes).length,requiredVotes:voters.length,chat:(g.chat||[]).slice(-50)});
 }
 function startNightPhase(room){const g=room.game;if(!g||g.phase==="finished")return;g.phase="night";g.nightVotes={};g.nightActions=g.nightActions||{saved:null,witchKill:null,witchUsed:false};emitPublicGameState(room,"nightStarted");
   const wolves=g.players.filter(p=>p.alive&&p.role==="Loup-Garou"); wolves.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{if(room.game?.phase!=="night")return;const target=randomAliveTarget(g,p=>p.role!=="Loup-Garou");if(target)g.nightVotes[bot.pseudo]=target.pseudo;tryResolveNight(room);},800+i*350));
@@ -3108,6 +3113,22 @@ io.on(
        ACTIONS DE PARTIE
     ===================================== */
     socket.on("nightVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="night")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive||v.role!=="Loup-Garou")return;g.nightVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.nightVotes).length,required:g.players.filter(p=>p.alive&&p.role==="Loup-Garou").length});tryResolveNight(room);saveDatabase();});
+    socket.on("gameChat",(data)=>{
+      const room=findRoom(data?.code);
+      const pseudo=String(data?.pseudo||"");
+      const player=room?.game?.players?.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(pseudo));
+      if(!room||!player||!player.alive||room.game.phase==="finished") return;
+      const text=String(data?.text||"").trim();
+      if(!text)return;
+      const filtered=filterChatText(text);
+      const msg={id:createId(),pseudo:player.pseudo,text:filtered,createdAt:Date.now()};
+      room.game.chat=Array.isArray(room.game.chat)?room.game.chat:[];
+      room.game.chat.push(msg);
+      room.game.chat=room.game.chat.slice(-80);
+      io.to(room.code).emit("gameChatMessage",msg);
+      saveDatabase();
+    });
+
     socket.on("roleAction",(data)=>{const room=findRoom(data?.code);if(!room)return;handleRoleAction(room,data);saveDatabase();});
     socket.on("hunterAction",(data)=>{const room=findRoom(data?.code);const g=room?.game;if(!g)return;const hunter=g.players.find(p=>p.pseudo===data?.pseudo&&p.role==="Chasseur"&&!p.alive);const target=g.players.find(p=>p.pseudo===data?.targetPseudo&&p.alive);if(!hunter||!target)return;target.alive=false;io.to(room.code).emit("hunterShot",{hunter:hunter.pseudo,target:target.pseudo});if(checkGameWinner(g))finishGame(room);else if(g.phase==="day"){g.day++;startNightPhase(room);}else startDayPhase(room,null);});
     socket.on("dayVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="day")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive)return;g.dayVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.dayVotes).length,required:g.players.filter(p=>p.alive).length});tryResolveDay(room);saveDatabase();});
