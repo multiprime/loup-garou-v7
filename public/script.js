@@ -292,6 +292,27 @@ $("loginForm")?.addEventListener(
    UTILISATEUR
 ===================================== */
 
+async function refreshSavedAccount(pseudo) {
+  try {
+    const response = await fetch(
+      `/api/profile/${encodeURIComponent(pseudo)}`
+    );
+    if (!response.ok) return false;
+
+    const data = await response.json();
+    if (data.user) {
+      currentUser = data.user;
+      saveCurrentUser();
+      updateProfile();
+      updateAdminButton();
+      return true;
+    }
+  } catch (error) {
+    console.warn("Impossible de recharger le compte :", error);
+  }
+  return false;
+}
+
 function loginUser(user) {
   if (!user || !user.pseudo) {
     return;
@@ -2188,7 +2209,7 @@ function renderNotification(n){
     wrap.appendChild(b);
   }
   const age=Math.max(0,Date.now()-Number(n.createdAt||Date.now()));
-  const remaining=Math.max(1000,120000-age);
+  const remaining=Math.max(1000,30000-age);
   setTimeout(()=>wrap.remove(),remaining);
   return wrap;
 }
@@ -2227,8 +2248,8 @@ async function loadShopV8(){
   const d=await apiJson("/api/shop"); const now=Date.now(); const boosts=currentUser.boosts||{};
   const left=id=>Math.max(0,Number(boosts[id+"_until"]||0)-now);
   const label=id=>{const ms=left(id);return ms>0?`<span class="boost-active">✦ X2 actif encore ${Math.ceil(ms/60000)} min</span>`:"";};
-  c.innerHTML=(d.items||[]).map(i=>`<div class="shop-card"><h3>🛒 ${esc(i.name)}</h3><p>${esc(i.description||"")}</p><p><span class="coin-icon"></span> ${i.price}</p>${i.id!=="blood_quarter"?label(i.id):""}<button class="main-button shop-buy" data-id="${esc(i.id)}">Acheter</button></div>`).join("");
-  c.querySelectorAll(".shop-buy").forEach(b=>b.onclick=async()=>{try{const d=await apiJson("/api/shop/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,itemId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadShopV8();}catch(e){alert("❌ "+e.message);}});
+  c.innerHTML=(d.items||[]).map(i=>{const affordable=Number(currentUser.coins||0)>=Number(i.price||0);return `<div class="shop-card"><h3>🛒 ${esc(i.name)}</h3><p>${esc(i.description||"")}</p><p><span class="coin-icon"></span> ${i.price}</p>${i.id!=="blood_quarter"?label(i.id):""}<button class="main-button shop-buy" data-id="${esc(i.id)}" ${affordable?"":"disabled"}>${affordable?"Acheter":"Pas assez de pièces"}</button></div>`;}).join("");
+  c.querySelectorAll(".shop-buy").forEach(b=>b.onclick=async()=>{try{const d=await apiJson("/api/shop/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,itemId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadShopV8();alert("✅ "+d.message);}catch(e){alert("❌ "+e.message);}});
  }catch(e){c.textContent="❌ "+e.message;}
 }
 async function loadBloodMoonV8(){const c=$("bloodMoonContent");if(!c||!currentUser)return;c.textContent="Chargement...";try{const d=await apiJson(`/api/blood-moon?pseudo=${encodeURIComponent(currentUser.pseudo)}`);updateBloodMoonTimer(d.event);if(!d.event.active){c.innerHTML="<h3>🌑 L'événement est fermé.</h3><p>Il revient vendredi de 07h00 à 20h00.</p>";return;}const p=d.progress;c.innerHTML=`<div class="blood-moon-event"><div class="blood-ladder"><div class="blood-rung">🌕 100 🪙</div><div class="blood-rung">🌕 200 XP</div><div class="blood-rung">🌕 500 XP</div><div class="blood-rung final">🌕 ${esc(p.title)} — titre exclusif</div></div><div class="blood-gauge"><div class="blood-gauge-fill" style="height:${p.quarters*25}%"></div><strong>${p.quarters}/4</strong></div></div><h3>Quêtes spéciales</h3><div class="cards-list">${(p.quests||[]).map(q=>`<div class="quest-card"><h3>${esc(q.title)}</h3><p>${esc(q.description)}</p><p>${q.progress}/${q.target}</p>${q.completed&&!q.claimed?`<button class="main-button bm-q" data-id="${esc(q.id)}">🌕 Gagner un quart</button>`:""}</div>`).join("")}</div><p>Quarts : ${p.quarters}/4</p><div class="bm-rewards">${(p.milestones||[]).map(m=>`<div class="blood-rung"><b>Palier ${m.quarter}/4</b><br>${m.reward.coins?`<span class="coin-icon"></span> ${m.reward.coins} pièces`:m.reward.xp?`✨ ${m.reward.xp} XP`:`🏷️ ${esc(m.reward.title)}`} ${p.quarters>=m.quarter&&!(p.claimed||[]).includes(m.quarter)?`<button class="main-button bm-claim" data-quarter="${m.quarter}">Récupérer</button>`:((p.claimed||[]).includes(m.quarter)?"✅ Récupéré":"🔒")}</div>`).join("")}</div><p>Bonus événement : x2 pièces • x2 XP • x2 trophées</p><h3>🏷️ Tes titres</h3><div class="title-list">${(currentUser.titles||[]).map(t=>`<button class="secondary-button title-equip" data-title="${esc(t)}">${esc(t)}${currentUser.equippedTitle===t?" ✓":""}</button>`).join("")}</div>`;c.querySelectorAll(".title-equip").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/titles/equip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,title:b.dataset.title})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-claim").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/blood-moon/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,quarter:Number(b.dataset.quarter)})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-q").forEach(b=>b.onclick=async()=>{try{await apiJson("/api/blood-moon/quest-claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,questId:b.dataset.id})});loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});}catch(e){c.textContent="❌ "+e.message;}}
@@ -2239,6 +2260,7 @@ socket.on("nightStarted",d=>renderGamePhaseV8("night",d));
 socket.on("dayStarted",d=>renderGamePhaseV8("day",d));
 socket.on("voteUpdate",d=>{const el=$("selectedVote");if(el&&d.voter===currentUser?.pseudo)el.textContent=`Vote envoyé contre ${d.target}`;const counter=document.querySelector(".game-vote-counter");if(counter&&d.required)counter.textContent=`🗳️ ${d.count}/${d.required} votes`;});
 socket.on("gameFinished",d=>{myGameRole=null;myGameClassChance=0;myGameTeammates=[];if(currentUser){currentUser.gameRole=null;saveCurrentUser();updateProfile();}document.body.dataset.lgPhase="salon";const c=$("roomsList");if(c)c.innerHTML=`<div class="room-card game-result"><h2>🏁 Partie terminée</h2><h3>Victoire : ${esc(d.winner)}</h3><p>Retourne au menu ou recrée un salon.</p></div>`;loadNotificationsV8();});
+socket.on("gameChatMessage",m=>{const c=$("gameChatMessages");if(!c)return;const el=document.createElement("div");el.className="game-chat-line";el.innerHTML=`<b>${esc(m.pseudo)} :</b> ${esc(m.text)}`;c.appendChild(el);c.scrollTop=c.scrollHeight;});
 socket.on("seerResult",d=>alert(`🔮 ${d.target} est ${d.role}.`));
 socket.on("roleActionResult",d=>alert("🌙 "+d.message));
 socket.on("hunterActionRequired",d=>renderHunterChoicesV8(d));
@@ -2265,11 +2287,11 @@ function renderGamePhaseV8(phase,data){
       <div class="game-role-card featured">
         <div class="role-label">TON RÔLE</div>
         <div class="my-role">🎭 ${esc(myGameRole||"Chargement...")}</div>
-        ${myGameRole==="Loup-Garou"&&myGameTeammates.length?`<div class="teammates">🐺 Alliés : ${myGameTeammates.map(x=>esc(x)).join(", ")}</div>`:""}
+        
       </div>
 
       <div class="game-instruction">
-        ${phase==="night" && myGameRole==="Loup-Garou"?"Choisis une cible puis confirme ton vote. Les autres rôles agissent secrètement.":
+        ${phase==="night" && myGameRole==="Loup-Garou"?"Choisis une cible puis confirme ton vote. Les autres rôles agissent secrètement. Aucun allié ne sera affiché.":
           phase==="night"&&myGameRole==="Voyante"?"Choisis un joueur puis utilise ton pouvoir pour découvrir son rôle.":
           phase==="night"&&myGameRole==="Sorcière"?"Choisis une cible puis utilise une potion disponible.":
           phase==="night"?"La nuit, reste attentif : ton rôle peut avoir une action spéciale.":
@@ -2278,9 +2300,23 @@ function renderGamePhaseV8(phase,data){
 
       <div class="game-players-grid" id="gameTargets"></div>
       <div class="game-action-panel" id="gameActions"></div>
+      <div class="game-chat-panel">
+        <div class="game-chat-head"><strong>💬 Discussion de la partie</strong><span>Sans insultes</span></div>
+        <div id="gameChatMessages" class="game-chat-messages"></div>
+        <div class="game-chat-compose"><input id="gameChatInput" maxlength="300" placeholder="Écris un message…"><button id="gameChatSend" class="main-button">Envoyer</button></div>
+      </div>
     </div>`;
 
   const t=$("gameTargets"), a=$("gameActions");
+  const gameChatBox=$("gameChatMessages"), gameChatInput=$("gameChatInput"), gameChatSend=$("gameChatSend");
+  if(gameChatBox){
+    gameChatBox.innerHTML="";
+    (data.chat||[]).slice(-50).forEach(m=>{const el=document.createElement("div");el.className="game-chat-line";el.innerHTML=`<b>${esc(m.pseudo)} :</b> ${esc(m.text)}`;gameChatBox.appendChild(el);});
+    gameChatBox.scrollTop=gameChatBox.scrollHeight;
+  }
+  const sendGameChat=()=>{const text=gameChatInput?.value.trim();if(!text)return;socket.emit("gameChat",{code:currentRoomCode,pseudo:currentUser.pseudo,text});if(gameChatInput)gameChatInput.value="";};
+  gameChatSend?.addEventListener("click",sendGameChat);
+  gameChatInput?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();sendGameChat();}});
   const targets=alive.filter(p=>p.pseudo!==currentUser.pseudo);
   targets.forEach(p=>{
     const card=document.createElement("button");
@@ -2335,51 +2371,8 @@ async function loadFriendsV8(){
  try{const d=await apiJson(`/api/friends/${encodeURIComponent(currentUser.pseudo)}`);c.innerHTML="";(d.friends||[]).forEach(f=>{const u=f.user||{};const card=document.createElement("div");card.className="friend-card";card.innerHTML=`<h3>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</h3><p>${f.online?"🟢 En ligne":"⚫ Hors ligne"} • ${f.inRoom?"🎮 En partie":"🟢 Disponible"}</p><button class="secondary-button chat-request">💬 Demander le chat</button><button class="main-button chat-open">💬 Ouvrir le chat</button>`;card.querySelector(".chat-request").onclick=async()=>{try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:u.pseudo})});alert("✅ Demande envoyée.");}catch(e){alert("❌ "+e.message);}};card.querySelector(".chat-open").onclick=()=>openChatV8(u.pseudo);c.appendChild(card);});if(!d.friends?.length)c.textContent="Aucun ami.";}catch(e){c.textContent="❌ "+e.message;}
 }
 $("friendsButton")?.addEventListener("click",loadFriendsV8);
-async function openChatV8(friendPseudo){
-  currentChatFriend=friendPseudo;
-  const c=$("friendResult"); if(!c||!currentUser)return;
-  c.innerHTML='<div class="chat-box chat-loading">💬 Chargement du chat sécurisé…</div>';
-  try{
-    const status=await apiJson(`/api/chat/status/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);
-    if(!status.allowed){
-      c.innerHTML=`<div class="chat-box chat-locked"><h3>🔒 Chat avec ${esc(friendPseudo)}</h3><p>Le chat est disponible uniquement après acceptation des deux côtés.</p><div class="chat-safe-note">🛡️ Les insultes sont bloquées automatiquement.</div></div>`;
-      if(status.pendingIncoming)c.insertAdjacentHTML('beforeend','<p>📨 Cette personne t’a envoyé une demande de chat. Va dans tes notifications pour accepter ou refuser.</p>');
-      else if(status.pendingOutgoing)c.insertAdjacentHTML('beforeend','<p>⏳ Demande envoyée. En attente de réponse.</p>');
-      else c.insertAdjacentHTML('beforeend','<button id="chatRequestNow" class="main-button">💬 Envoyer une demande de chat</button>');
-      $("chatRequestNow")?.addEventListener("click",async()=>{try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo})});alert("✅ Demande de chat envoyée.");openChatV8(friendPseudo);}catch(e){alert("❌ "+e.message);}});
-      return;
-    }
-    const d=await apiJson(`/api/chat/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);
-    c.innerHTML=`<div class="chat-box">
-      <div class="chat-head"><div><h3>💬 ${esc(friendPseudo)}</h3><small>🔒 Chat entre amis • insultes bloquées</small></div><span class="chat-online">● sécurisé</span></div>
-      <div id="chatMessages" class="chat-messages">${(d.messages||[]).map(m=>`<div class="chat-message ${normalizeClient(m.from)===normalizeClient(currentUser.pseudo)?'mine':'theirs'}"><b>${esc(m.from)}</b><span>${esc(m.text)}</span><small>${new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`).join('') || '<div class="chat-empty">Aucun message. Commence la discussion 👋</div>'}</div>
-      <div class="chat-compose"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Écris un message respectueux…"><button id="chatSend" class="main-button">Envoyer</button></div>
-      <div class="chat-rules">🛡️ Pas d’insultes • max. 500 caractères • réservé aux amis</div>
-    </div>`;
-    const send=async()=>{
-      const input=$("chatInput"); if(!input)return;
-      const text=input.value.trim(); if(!text)return;
-      const button=$("chatSend"); button.disabled=true;
-      try{
-        const x=await apiJson("/api/chat/send-safe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo,text})});
-        input.value=""; appendChatMessageV12(x.message,true);
-      }catch(e){alert("❌ "+e.message);}finally{button.disabled=false;input.focus();}
-    };
-    $("chatSend").onclick=send;
-    $("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
-    scrollChatV12();
-  }catch(e){c.innerHTML=`<div class="chat-box">❌ ${esc(e.message)}</div>`;}
-}
-function appendChatMessageV12(m){
-  const box=$("chatMessages");if(!box)return;
-  box.querySelector('.chat-empty')?.remove();
-  const mine=normalizeClient(m.from)===normalizeClient(currentUser.pseudo);
-  const el=document.createElement('div');el.className='chat-message '+(mine?'mine':'theirs');
-  el.innerHTML=`<b>${esc(m.from)}</b><span>${esc(m.text)}</span><small>${new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>`;
-  box.appendChild(el);scrollChatV12();
-}
-function scrollChatV12(){const b=$("chatMessages");if(b)b.scrollTop=b.scrollHeight;}
-
+async function openChatV8(friendPseudo){currentChatFriend=friendPseudo;const c=$("friendResult");if(!c)return;try{const status=await apiJson(`/api/chat/status/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);if(!status.allowed){if(!status.pending){if(!confirm("Le chat doit être accepté. Envoyer une demande ?"))return;try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo})});}catch(e){alert("❌ "+e.message);}}return;}const d=await apiJson(`/api/chat/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);c.innerHTML=`<div class="chat-box"><h3>💬 ${esc(friendPseudo)}</h3><div id="chatMessages">${(d.messages||[]).map(m=>`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`).join("")}</div><div class="chat-compose"><input id="chatInput" maxlength="500" placeholder="Ton message"><button id="chatSend" class="main-button">Envoyer</button></div></div>`;$("chatSend").onclick=async()=>{try{const x=await apiJson("/api/chat/send-safe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo,text:$("chatInput").value})});$("chatInput").value="";const m=$("chatMessages");m.insertAdjacentHTML("beforeend",`<p><b>${esc(x.message.from)} :</b> ${esc(x.message.text)}</p>`);}catch(e){alert("❌ "+e.message);}};}catch(e){alert("❌ "+e.message);}}
+socket.on("chatMessage",m=>{if(currentChatFriend&&normalizeClient(m.from)===normalizeClient(currentChatFriend)){const c=$("chatMessages");if(c)c.insertAdjacentHTML("beforeend",`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`);}});
 function normalizeClient(x){return String(x||"").trim().toLowerCase();}
 
 /* RÉCOMPENSE ADMIN : le type trophées */
