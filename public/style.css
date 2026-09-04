@@ -1178,10 +1178,11 @@ body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circl
 @media(max-width:800px){.game-players-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.teammates{width:100%;margin-left:0}.game-header{flex-direction:column}.game-vote-counter{width:100%;box-sizing:border-box}}
 @media(max-width:430px){.game-screen{padding:14px;border-radius:18px}.game-players-grid{grid-template-columns:1fr 1fr}.game-player-card{min-height:92px}.vote-panel button{width:100%;margin-left:0}}
 
-/* V12.1 — CHAT AMIS SÉCURISÉ */
-.chat-box{background:linear-gradient(180deg,rgba(22,22,22,.98),rgba(10,10,10,.98));box-shadow:0 12px 35px rgba(0,0,0,.28)}
-.chat-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.09)}
-.chat-head h3{margin:0 0 3px}.chat-head small{opacity:.58}.chat-online{font-size:.72rem;opacity:.65;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 8px}
-.chat-messages{display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:330px;overflow:auto;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px}
-.chat-message{max-width:82%;padding:9px 11px;border:1px solid rgba(255,255,255,.09);border-radius:13px;background:#171717;display:flex;flex-direction:column;gap:3px}.chat-message.mine{align-self:flex-end;background:rgba(95,13,24,.42);border-color:rgba(190,40,55,.35)}.chat-message.theirs{align-self:flex-start}.chat-message b{font-size:.72rem;opacity:.7}.chat-message span{line-height:1.35;word-break:break-word}.chat-message small{font-size:.62rem;opacity:.4}.chat-empty,.chat-loading{opacity:.65;text-align:center;padding:28px 10px}.chat-safe-note,.chat-rules{font-size:.76rem;opacity:.62;margin-top:10px}.chat-rules{text-align:center;margin-top:8px}.chat-locked{margin-bottom:10px}
-.chat-compose input{border-radius:12px}.chat-compose button:disabled{opacity:.5;cursor:not-allowed}
+/* V13 - discussion intégrée à la partie */
+.game-chat-panel{margin-top:18px;padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(5,5,5,.78)}
+.game-chat-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px}.game-chat-head span{font-size:12px;opacity:.65}
+.game-chat-messages{height:150px;overflow:auto;padding:10px;border-radius:12px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07)}
+.game-chat-line{padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.05);font-size:14px}.game-chat-line:last-child{border-bottom:0}
+.game-chat-compose{display:flex;gap:8px;margin-top:10px}.game-chat-compose input{flex:1;min-width:0}
+.shop-buy:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:700px){.game-chat-compose{flex-direction:column}}
