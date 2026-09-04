@@ -1153,3 +1153,35 @@ body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circl
 /* Monnaie : vraie pièce CSS */
 .coin-icon{display:inline-block;width:22px;height:22px;border-radius:50%;background:linear-gradient(145deg,#fff2a8,#e0a51a 55%,#9b6500);border:2px solid #f7d45a;box-shadow:inset 0 0 0 2px rgba(255,255,255,.22),0 2px 8px rgba(0,0,0,.35);vertical-align:-5px;position:relative;margin-right:5px;}
 .coin-icon::after{content:'₡';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#7a4b00;font-weight:900;font-size:13px;text-shadow:0 1px rgba(255,255,255,.35);}
+
+/* Bonus boutique : multiplicateurs temporaires de 10 minutes */
+.active-boosts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.boost-badge,.boost-active{display:inline-block;padding:4px 9px;border:1px solid rgba(255,255,255,.18);border-radius:999px;background:rgba(120,20,20,.22);font-size:.82rem}
+
+/* V12 — vraie interface de partie, lisible et centrée sur les votes */
+.game-screen{max-width:980px;margin:18px auto;padding:22px;border:1px solid rgba(255,255,255,.1);border-radius:24px;background:linear-gradient(180deg,rgba(24,24,24,.98),rgba(11,11,11,.98));box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.game-header{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:18px;margin-bottom:18px}
+.game-header h2{margin:8px 0 0;font-size:clamp(1.35rem,3vw,2rem)}
+.game-header h2 small{font-size:.72em;opacity:.6;margin-left:8px}
+.game-phase-badge{display:inline-block;padding:6px 11px;border-radius:999px;font-size:.76rem;font-weight:800;letter-spacing:.08em;border:1px solid rgba(255,255,255,.12)}
+.game-phase-badge.night{background:rgba(55,50,100,.25)}.game-phase-badge.day{background:rgba(140,100,35,.2)}
+.game-vote-counter{font-weight:800;white-space:nowrap;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.game-role-card.featured{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:16px;padding:17px 19px;border-radius:16px;border:1px solid rgba(190,40,55,.5);background:linear-gradient(90deg,rgba(80,8,15,.45),rgba(255,255,255,.025))}
+.role-label{font-size:.7rem;letter-spacing:.12em;opacity:.65;font-weight:900}.my-role{font-size:1.25rem;font-weight:900}.teammates{font-size:.9rem;opacity:.9;margin-left:auto}
+.game-instruction{padding:13px 15px;margin-bottom:18px;border-left:3px solid #8d2531;background:rgba(255,255,255,.035);border-radius:10px;line-height:1.45}
+.game-players-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.game-player-card{position:relative;min-height:105px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:#121212;color:#eee;cursor:pointer;transition:.16s transform,.16s border-color,.16s background}
+.game-player-card:hover:not(:disabled){transform:translateY(-2px);border-color:rgba(210,55,70,.65);background:#191919}.game-player-card.selected{border-color:#d33a4d;box-shadow:0 0 0 2px rgba(211,58,77,.16);background:rgba(100,12,23,.3)}.game-player-card:disabled{opacity:.6;cursor:not-allowed}
+.player-avatar{font-size:1.7rem}.player-name{font-weight:800;word-break:break-word;text-align:center}.player-status{font-size:.63rem;opacity:.5;letter-spacing:.08em}
+.game-action-panel{margin-top:18px}.vote-panel{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:15px;border:1px solid rgba(255,255,255,.1);border-radius:16px;background:rgba(255,255,255,.035)}.vote-panel strong{font-size:1rem}.vote-panel span{opacity:.72}.vote-panel small{width:100%;opacity:.5}.vote-panel button{margin-left:auto}
+.game-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:800px){.game-players-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.teammates{width:100%;margin-left:0}.game-header{flex-direction:column}.game-vote-counter{width:100%;box-sizing:border-box}}
+@media(max-width:430px){.game-screen{padding:14px;border-radius:18px}.game-players-grid{grid-template-columns:1fr 1fr}.game-player-card{min-height:92px}.vote-panel button{width:100%;margin-left:0}}
+
+/* V12.1 — CHAT AMIS SÉCURISÉ */
+.chat-box{background:linear-gradient(180deg,rgba(22,22,22,.98),rgba(10,10,10,.98));box-shadow:0 12px 35px rgba(0,0,0,.28)}
+.chat-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,.09)}
+.chat-head h3{margin:0 0 3px}.chat-head small{opacity:.58}.chat-online{font-size:.72rem;opacity:.65;border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 8px}
+.chat-messages{display:flex;flex-direction:column;gap:8px;min-height:180px;max-height:330px;overflow:auto;padding:14px 4px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px}
+.chat-message{max-width:82%;padding:9px 11px;border:1px solid rgba(255,255,255,.09);border-radius:13px;background:#171717;display:flex;flex-direction:column;gap:3px}.chat-message.mine{align-self:flex-end;background:rgba(95,13,24,.42);border-color:rgba(190,40,55,.35)}.chat-message.theirs{align-self:flex-start}.chat-message b{font-size:.72rem;opacity:.7}.chat-message span{line-height:1.35;word-break:break-word}.chat-message small{font-size:.62rem;opacity:.4}.chat-empty,.chat-loading{opacity:.65;text-align:center;padding:28px 10px}.chat-safe-note,.chat-rules{font-size:.76rem;opacity:.62;margin-top:10px}.chat-rules{text-align:center;margin-top:8px}.chat-locked{margin-bottom:10px}
+.chat-compose input{border-radius:12px}.chat-compose button:disabled{opacity:.5;cursor:not-allowed}
