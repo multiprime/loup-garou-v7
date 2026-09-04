@@ -520,6 +520,21 @@ function addNotification(
    RÉCOMPENSES
 ========================================= */
 
+function rewardDescription(reward = {}) {
+  const parts = [];
+  const coins = Number(reward.coins || 0);
+  const xp = Number(reward.xp || 0);
+  const trophies = Number(reward.trophies || 0);
+  if (coins > 0) parts.push(`${coins} pièce${coins > 1 ? "s" : ""} 🪙`);
+  if (xp > 0) parts.push(`${xp} XP ✨`);
+  if (trophies > 0) parts.push(`${trophies} trophée${trophies > 1 ? "s" : ""} 🏆`);
+  if (reward.classId) {
+    const classe = CLASSES.find(c => c.id === reward.classId);
+    if (classe) parts.push(`la classe ${classe.name} 🐺`);
+  }
+  return parts.length ? parts.join(" + ") : "une récompense";
+}
+
 function applyReward(
   user,
   reward
@@ -2550,7 +2565,10 @@ function emitGameStart(room) {
     if (playerSocket) {
       io.to(playerSocket).emit("yourRole", {
         role: player.role,
-        classChance: player.classChance
+        classChance: player.classChance,
+        teammates: player.role === "Loup-Garou"
+          ? game.players.filter(x => x.role === "Loup-Garou" && x.pseudo !== player.pseudo).map(x => x.pseudo)
+          : []
       });
     }
   });
