@@ -27,10 +27,9 @@ const ADMIN_PSEUDO =
   (process.env.ADMIN_PSEUDO || "creator2026")
     .toLowerCase();
 
-const DATA_FILE = path.join(
-  __dirname,
-  "data.json"
-);
+const DATA_DIR = process.env.DATA_DIR || __dirname;
+fs.mkdirSync(DATA_DIR, { recursive: true });
+const DATA_FILE = path.join(DATA_DIR, "data.json");
 
 app.use(express.json());
 
@@ -56,7 +55,8 @@ function defaultDatabase() {
     announcements: {
       text: "Bienvenue dans Loup-Garou V7 🐺"
     },
-    bloodMoonProgress: {}
+    bloodMoonProgress: {},
+    bloodMoonManualUntil: 0
   };
 }
 
@@ -102,11 +102,9 @@ db.users.forEach(ensureUserState);
 
 function saveDatabase() {
   try {
-    fs.writeFileSync(
-      DATA_FILE,
-      JSON.stringify(db, null, 2)
-    );
-
+    const tempFile = `${DATA_FILE}.tmp`;
+    fs.writeFileSync(tempFile, JSON.stringify(db, null, 2), "utf8");
+    fs.renameSync(tempFile, DATA_FILE);
   } catch (error) {
     console.error(
       "Erreur sauvegarde :",
@@ -363,13 +361,25 @@ function getBloodMoonWeekKey(date = new Date()) {
   const y=Number(parts.find(p=>p.type==="year")?.value),m=Number(parts.find(p=>p.type==="month")?.value),d=Number(parts.find(p=>p.type==="day")?.value);
   const base=new Date(Date.UTC(y,m-1,d)); const day=base.getUTCDay(); base.setUTCDate(base.getUTCDate()-((day+2)%7)); return base.toISOString().slice(0,10);
 }
-const BLOOD_MOON_TITLES=["Loup écarlate","Sang de la nuit","Croissant maudit","Gardien de la lune","Hurlement rouge","Marcheur lunaire","Furie écarlate","Seigneur de la Lune"];
+const BLOOD_MOON_TITLES=[
+  "Loup écarlate","Sang de la nuit","Croissant maudit","Gardien lunaire","Hurlement rouge","Marcheur lunaire","Furie écarlate","Seigneur de la Lune",
+  "Griffe carmin","Veilleur écarlate","Ombre sanguine","Roi du croissant","Traqueur rouge","Lune maudite","Hurleur nocturne","Sentinelle du sang",
+  "Loup de rubis","Éclat lunaire","Prédateur écarlate","Oracle de sang","Rôdeur de la lune","Cœur carmin","Faucheur nocturne","Prince écarlate",
+  "Gardien carmin","Chasseur de lune","Flamme sanguine","Maître du croissant","Hurlement de rubis","Éclipse rouge","Veilleur nocturne","Seigneur carmin",
+  "Lune ardente","Loup de l'éclipse","Traqueur carmin","Sang de rubis","Gardien rouge","Rôdeur écarlate","Croissant de sang","Furie lunaire",
+  "Chasseur carmin","Ombre du croissant","Hurleur de rubis","Sentinelle rouge","Loup nocturne","Éclipse carmine","Maître lunaire","Griffe de sang",
+  "Veilleur de rubis","Seigneur écarlate","Traqueur lunaire","Gardien de l'éclipse"
+];
 function getWeeklyBloodMoonTitle(weekKey){let n=0;for(const c of String(weekKey))n=(n*31+c.charCodeAt(0))>>>0;return BLOOD_MOON_TITLES[n%BLOOD_MOON_TITLES.length];}
 function getBloodMoonStatus(){
   const now=new Date(),p=getParisDateParts(now);
-  const active=p.day===5 && (p.hour>7 || (p.hour===7&&p.minute>=0)) && p.hour<20;
+  const manualActive = Number(db.bloodMoonManualUntil || 0) > Date.now();
+  const scheduledActive = p.day===5 && (p.hour>7 || (p.hour===7&&p.minute>=0)) && p.hour<20;
+  const active = manualActive || scheduledActive;
   let endsAt=null;
-  if(active){
+  if(manualActive){
+    endsAt=Number(db.bloodMoonManualUntil);
+  } else if(scheduledActive){
     const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Paris",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(now);
     const date=`${parts.find(x=>x.type==="year").value}-${parts.find(x=>x.type==="month").value}-${parts.find(x=>x.type==="day").value}`;
     const tzParts=new Intl.DateTimeFormat("en-US",{timeZone:"Europe/Paris",timeZoneName:"shortOffset",hour:"2-digit"}).formatToParts(new Date(`${date}T20:00:00Z`));
@@ -456,10 +466,18 @@ function updateLevel(user) {
    NOTIFICATIONS
 ========================================= */
 
+const NOTIFICATION_TTL = 2 * 60 * 1000;
+
+function purgeExpiredNotifications() {
+  const cutoff = Date.now() - NOTIFICATION_TTL;
+  db.notifications = (db.notifications || []).filter(n => Number(n.createdAt || 0) > cutoff);
+}
+
 function addNotification(
   pseudo,
   notification
 ) {
+  purgeExpiredNotifications();
   const user = findUser(pseudo);
 
   if (!user) return;
@@ -1412,6 +1430,18 @@ app.post("/api/blood-moon/claim",(req,res)=>{
 
 
 /* =========================================
+   API : ADMIN - LUNE DE SANG MANUELLE
+========================================= */
+app.post("/api/admin/blood-moon/start", (req,res)=>{
+  if(normalizePseudo(req.body.adminPseudo)!==ADMIN_PSEUDO)return res.status(403).json({message:"Accès refusé."});
+  db.bloodMoonManualUntil=Date.now()+20*60*1000;
+  saveDatabase();
+  const status=getBloodMoonStatus();
+  io.emit("bloodMoonStatusChanged",status);
+  res.json({message:"🌕 Lune de Sang activée pendant 20 minutes.",event:status});
+});
+
+/* =========================================
    API : CLASSEMENT
 ========================================= */
 
@@ -1454,6 +1484,8 @@ app.get(
 app.get(
   "/api/notifications/:pseudo",
   (req, res) => {
+    purgeExpiredNotifications();
+    saveDatabase();
     const user =
       findUser(
         req.params.pseudo
@@ -2192,6 +2224,11 @@ app.get(
       friendPseudo
     } = req.params;
 
+    const a=findUser(pseudo), b=findUser(friendPseudo);
+    if(!a||!b||!areFriends(a.pseudo,b.pseudo)||a.chatEnabled===false||b.chatEnabled===false||!(Array.isArray(a.chatAllowed)&&Array.isArray(b.chatAllowed)&&a.chatAllowed.includes(normalizePseudo(b.pseudo))&&b.chatAllowed.includes(normalizePseudo(a.pseudo)))){
+      return res.status(403).json({message:"Le chat n'est pas autorisé entre ces deux joueurs."});
+    }
+
     const messages =
       db.messages.filter(
         (message) =>
@@ -2367,8 +2404,8 @@ app.get("/api/chat/status/:pseudo/:friendPseudo",(req,res)=>{
   const allowed=areFriends(a.pseudo,b.pseudo)&&a.chatEnabled!==false&&b.chatEnabled!==false; const pending=db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(a.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(b.pseudo)); res.json({allowed,pending});
 });
 app.post("/api/chat/request",(req,res)=>{const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);if(!from||!to)return res.status(404).json({message:"Utilisateur introuvable."});if(!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Vous devez être amis."});if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});if(db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(from.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(to.pseudo)))return res.status(400).json({message:"Demande déjà envoyée."});const r={id:createId(),fromPseudo:from.pseudo,toPseudo:to.pseudo,type:"chat",createdAt:Date.now()};db.friendRequests.push(r);addNotification(to.pseudo,{title:"💬 Demande de chat",message:`${from.pseudo} souhaite discuter avec toi.`,type:"chatRequest",requestId:r.id});saveDatabase();res.json({message:"Demande de chat envoyée."});});
-app.post("/api/chat/respond",(req,res)=>{const r=db.friendRequests.find(x=>x.id===req.body.requestId&&x.type==="chat"&&normalizePseudo(x.toPseudo)===normalizePseudo(req.body.pseudo));if(!r)return res.status(404).json({message:"Demande introuvable."});db.friendRequests=db.friendRequests.filter(x=>x.id!==r.id);if(req.body.accept){const from=findUser(r.fromPseudo),to=findUser(r.toPseudo);from.chatAllowed=from.chatAllowed||[];to.chatAllowed=to.chatAllowed||[];if(!from.chatAllowed.includes(normalizePseudo(to.pseudo)))from.chatAllowed.push(normalizePseudo(to.pseudo));if(!to.chatAllowed.includes(normalizePseudo(from.pseudo)))to.chatAllowed.push(normalizePseudo(from.pseudo));addNotification(r.fromPseudo,{title:"💬 Chat accepté",message:`${r.toPseudo} a accepté ta demande de chat.`,type:"info"});}saveDatabase();res.json({message:req.body.accept?"Chat accepté !":"Chat refusé."});});
-app.post("/api/chat/send-safe",(req,res)=>{const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);if(!from||!to||!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Le chat est réservé aux amis."});if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});const allowed=db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(from.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(to.pseudo))||db.friendRequests.some(r=>r.type==="chat"&&normalizePseudo(r.fromPseudo)===normalizePseudo(to.pseudo)&&normalizePseudo(r.toPseudo)===normalizePseudo(from.pseudo))||from.chatAllowed?.includes(normalizePseudo(to.pseudo))||to.chatAllowed?.includes(normalizePseudo(from.pseudo)); if(!allowed)return res.status(403).json({message:"Vous devez accepter la demande de chat."});const msg={id:createId(),from:from.pseudo,to:to.pseudo,text:filterChatText(req.body.text),createdAt:Date.now()};db.messages.push(msg);saveDatabase();const sid=onlineUsers.get(normalizePseudo(to.pseudo));if(sid)io.to(sid).emit("chatMessage",msg);res.json({message:msg});});
+app.post("/api/chat/respond",(req,res)=>{const r=db.friendRequests.find(x=>x.id===req.body.requestId&&x.type==="chat"&&normalizePseudo(x.toPseudo)===normalizePseudo(req.body.pseudo));if(!r)return res.status(404).json({message:"Demande introuvable."});db.friendRequests=db.friendRequests.filter(x=>x.id!==r.id);if(req.body.accept){const from=findUser(r.fromPseudo),to=findUser(r.toPseudo);from.chatAllowed=from.chatAllowed||[];to.chatAllowed=to.chatAllowed||[];if(!from.chatAllowed.includes(normalizePseudo(to.pseudo)))from.chatAllowed.push(normalizePseudo(to.pseudo));if(!to.chatAllowed.includes(normalizePseudo(from.pseudo)))to.chatAllowed.push(normalizePseudo(from.pseudo));addNotification(r.fromPseudo,{title:"💬 Chat accepté",message:`${r.toPseudo} a accepté ta demande de chat.`,type:"info"});}else{addNotification(r.fromPseudo,{title:"💬 Chat refusé",message:`${r.toPseudo} a refusé ta demande de chat.`,type:"info"});}saveDatabase();res.json({message:req.body.accept?"Chat accepté !":"Chat refusé."});});
+app.post("/api/chat/send-safe",(req,res)=>{const from=findUser(req.body.fromPseudo),to=findUser(req.body.toPseudo);if(!from||!to||!areFriends(from.pseudo,to.pseudo))return res.status(403).json({message:"Le chat est réservé aux amis."});if(from.chatEnabled===false||to.chatEnabled===false)return res.status(403).json({message:"Le chat est désactivé."});const allowed=Array.isArray(from.chatAllowed)&&Array.isArray(to.chatAllowed)&&from.chatAllowed.includes(normalizePseudo(to.pseudo))&&to.chatAllowed.includes(normalizePseudo(from.pseudo)); if(!allowed)return res.status(403).json({message:"Vous devez accepter la demande de chat."});const msg={id:createId(),from:from.pseudo,to:to.pseudo,text:filterChatText(req.body.text),createdAt:Date.now()};db.messages.push(msg);saveDatabase();const sid=onlineUsers.get(normalizePseudo(to.pseudo));if(sid)io.to(sid).emit("chatMessage",msg);res.json({message:msg});});
 app.post("/api/settings/chat",(req,res)=>{const u=findUser(req.body.pseudo);if(!u)return res.status(404).json({message:"Utilisateur introuvable."});u.chatEnabled=req.body.chatEnabled!==false;saveDatabase();res.json({message:"Paramètre du chat enregistré.",user:publicUser(u)});});
 
 const SHOP_ITEMS=[{id:"double_coins",name:"x2 pièces",price:200,description:"Double les pièces de ta prochaine partie."},{id:"double_xp",name:"x2 XP",price:200,description:"Double l'XP de ta prochaine partie."}];
@@ -2567,7 +2604,7 @@ function emitGameStart(room) {
         role: player.role,
         classChance: player.classChance,
         teammates: player.role === "Loup-Garou"
-          ? game.players.filter(x => x.role === "Loup-Garou" && x.pseudo !== player.pseudo).map(x => x.pseudo)
+          ? room.game.players.filter(x => x.role === "Loup-Garou" && x.pseudo !== player.pseudo).map(x => x.pseudo)
           : []
       });
     }
@@ -3198,6 +3235,8 @@ setInterval(
 /* =========================================
    DÉMARRAGE
 ========================================= */
+
+setInterval(()=>{purgeExpiredNotifications();saveDatabase();},30000);
 
 server.listen(
   PORT,
