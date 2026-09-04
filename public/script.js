@@ -402,6 +402,18 @@ function updateProfile() {
       currentUser.trophies || 0;
   }
 
+  const nowBoost=Date.now(), boosts=currentUser.boosts||{};
+  const boostBox=$("activeBoosts");
+  if(boostBox){
+    const active=[];
+    [["double_coins_until","🪙 X2 pièces"],["double_xp_until","✨ X2 XP"],["double_trophies_until","🏆 X2 trophées"]].forEach(([key,label])=>{
+      const left=Number(boosts[key]||0)-nowBoost;
+      if(left>0)active.push(`<span class="boost-badge">${label} — ${Math.ceil(left/60000)} min</span>`);
+    });
+    boostBox.innerHTML=active.join("");
+    boostBox.classList.toggle("hidden",active.length===0);
+  }
+
   updateXpBar();
 }
 
@@ -2168,13 +2180,17 @@ loadRanking = async function(){
 
 /* NOTIFICATIONS */
 function renderNotification(n){
- const wrap=document.createElement("div");wrap.className="notification-card";wrap.dataset.notificationId=n.id;wrap.innerHTML=`<strong>${esc(n.title)}</strong><p>${esc(n.message)}</p>`;
- const age=Math.max(0,Date.now()-Number(n.createdAt||Date.now()));
- setTimeout(()=>wrap.remove(),Math.max(1,120000-age));
- if(n.reward&&!n.claimed) {const b=document.createElement("button");b.className="main-button";b.textContent="Récupérer";b.onclick=async()=>{try{const d=await apiJson("/api/notifications/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,notificationId:n.id})});currentUser=d.user;saveCurrentUser();updateProfile();b.remove();}catch(e){alert("❌ "+e.message);}};wrap.appendChild(b);}
- if(n.type==="roomInvite"&&n.action){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=()=>socket.emit("respondRoomInvite",{requestId:n.action.requestId,pseudo:currentUser.pseudo,accept:ok});wrap.appendChild(b);});}
- if(n.type==="chatRequest"&&n.requestId){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=async()=>{try{await apiJson("/api/chat/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,requestId:n.requestId,accept:ok})});b.parentElement?.remove();}catch(e){alert("❌ "+e.message);}};wrap.appendChild(b);});}
- return wrap;
+  const wrap=document.createElement("div");wrap.className="notification-card";wrap.dataset.notificationId=n.id;
+  wrap.innerHTML=`<strong>${esc(n.title)}</strong><p>${esc(n.message)}</p>`;
+  if(n.reward&&!n.claimed){
+    const b=document.createElement("button");b.className="main-button";b.textContent="Récupérer";
+    b.onclick=async()=>{try{const d=await apiJson("/api/notifications/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,notificationId:n.id})});currentUser=d.user;saveCurrentUser();updateProfile();wrap.remove();}catch(e){alert("❌ "+e.message);}};
+    wrap.appendChild(b);
+  }
+  const age=Math.max(0,Date.now()-Number(n.createdAt||Date.now()));
+  const remaining=Math.max(1000,120000-age);
+  setTimeout(()=>wrap.remove(),remaining);
+  return wrap;
 }
 async function loadNotificationsV8(){if(!currentUser)return;try{const d=await apiJson(`/api/notifications/${encodeURIComponent(currentUser.pseudo)}`);const c=$("notifications");if(!c)return;c.innerHTML="";(d.notifications||[]).slice(0,8).forEach(n=>c.appendChild(renderNotification(n)));}catch{}}
 socket.on("notification",n=>{const c=$("notifications");if(c)c.prepend(renderNotification(n));});
@@ -2205,21 +2221,101 @@ $("adminGiveButton")?.addEventListener("click",()=>{});
 $("chatEnabledToggle")?.addEventListener("change",async()=>{try{const d=await apiJson("/api/settings/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,chatEnabled:$ ("chatEnabledToggle").checked})});currentUser=d.user;saveCurrentUser();}catch(e){alert("❌ "+e.message);}});
 
 /* BOUTIQUE */
-async function loadShopV8(){const c=$("shopList");if(!c||!currentUser)return;c.textContent="Chargement...";try{const d=await apiJson("/api/shop");c.innerHTML=(d.items||[]).map(i=>`<div class="shop-card"><h3>🛒 ${esc(i.name)}</h3><p>${esc(i.description||"")}</p><p>🪙 ${i.price}</p><button class="main-button shop-buy" data-id="${esc(i.id)}">Acheter</button></div>`).join("");c.querySelectorAll(".shop-buy").forEach(b=>b.onclick=async()=>{try{const d=await apiJson("/api/shop/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,itemId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadShopV8();}catch(e){alert("❌ "+e.message);}});}catch(e){c.textContent="❌ "+e.message;}}
-
-/* LUNE DE SANG */
+async function loadShopV8(){
+ const c=$("shopList");if(!c||!currentUser)return;c.textContent="Chargement...";
+ try{
+  const d=await apiJson("/api/shop"); const now=Date.now(); const boosts=currentUser.boosts||{};
+  const left=id=>Math.max(0,Number(boosts[id+"_until"]||0)-now);
+  const label=id=>{const ms=left(id);return ms>0?`<span class="boost-active">✦ X2 actif encore ${Math.ceil(ms/60000)} min</span>`:"";};
+  c.innerHTML=(d.items||[]).map(i=>`<div class="shop-card"><h3>🛒 ${esc(i.name)}</h3><p>${esc(i.description||"")}</p><p><span class="coin-icon"></span> ${i.price}</p>${i.id!=="blood_quarter"?label(i.id):""}<button class="main-button shop-buy" data-id="${esc(i.id)}">Acheter</button></div>`).join("");
+  c.querySelectorAll(".shop-buy").forEach(b=>b.onclick=async()=>{try{const d=await apiJson("/api/shop/buy",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,itemId:b.dataset.id})});currentUser=d.user;saveCurrentUser();updateProfile();loadShopV8();}catch(e){alert("❌ "+e.message);}});
+ }catch(e){c.textContent="❌ "+e.message;}
+}
 async function loadBloodMoonV8(){const c=$("bloodMoonContent");if(!c||!currentUser)return;c.textContent="Chargement...";try{const d=await apiJson(`/api/blood-moon?pseudo=${encodeURIComponent(currentUser.pseudo)}`);updateBloodMoonTimer(d.event);if(!d.event.active){c.innerHTML="<h3>🌑 L'événement est fermé.</h3><p>Il revient vendredi de 07h00 à 20h00.</p>";return;}const p=d.progress;c.innerHTML=`<div class="blood-moon-event"><div class="blood-ladder"><div class="blood-rung">🌕 100 🪙</div><div class="blood-rung">🌕 200 XP</div><div class="blood-rung">🌕 500 XP</div><div class="blood-rung final">🌕 ${esc(p.title)} — titre exclusif</div></div><div class="blood-gauge"><div class="blood-gauge-fill" style="height:${p.quarters*25}%"></div><strong>${p.quarters}/4</strong></div></div><h3>Quêtes spéciales</h3><div class="cards-list">${(p.quests||[]).map(q=>`<div class="quest-card"><h3>${esc(q.title)}</h3><p>${esc(q.description)}</p><p>${q.progress}/${q.target}</p>${q.completed&&!q.claimed?`<button class="main-button bm-q" data-id="${esc(q.id)}">🌕 Gagner un quart</button>`:""}</div>`).join("")}</div><p>Quarts : ${p.quarters}/4</p><div class="bm-rewards">${(p.milestones||[]).map(m=>`<div class="blood-rung"><b>Palier ${m.quarter}/4</b><br>${m.reward.coins?`<span class="coin-icon"></span> ${m.reward.coins} pièces`:m.reward.xp?`✨ ${m.reward.xp} XP`:`🏷️ ${esc(m.reward.title)}`} ${p.quarters>=m.quarter&&!(p.claimed||[]).includes(m.quarter)?`<button class="main-button bm-claim" data-quarter="${m.quarter}">Récupérer</button>`:((p.claimed||[]).includes(m.quarter)?"✅ Récupéré":"🔒")}</div>`).join("")}</div><p>Bonus événement : x2 pièces • x2 XP • x2 trophées</p><h3>🏷️ Tes titres</h3><div class="title-list">${(currentUser.titles||[]).map(t=>`<button class="secondary-button title-equip" data-title="${esc(t)}">${esc(t)}${currentUser.equippedTitle===t?" ✓":""}</button>`).join("")}</div>`;c.querySelectorAll(".title-equip").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/titles/equip",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,title:b.dataset.title})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-claim").forEach(b=>b.onclick=async()=>{try{const x=await apiJson("/api/blood-moon/claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,quarter:Number(b.dataset.quarter)})});currentUser=x.user;saveCurrentUser();updateProfile();loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});c.querySelectorAll(".bm-q").forEach(b=>b.onclick=async()=>{try{await apiJson("/api/blood-moon/quest-claim",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,questId:b.dataset.id})});loadBloodMoonV8();}catch(e){alert("❌ "+e.message);}});}catch(e){c.textContent="❌ "+e.message;}}
 
 /* Socket gameplay */
 socket.on("yourRole",d=>{myGameRole=d.role||null;myGameClassChance=d.classChance||0;myGameTeammates=Array.isArray(d.teammates)?d.teammates:[];if(currentUser){currentUser.gameRole=myGameRole;updateProfile();}const el=$("playerGameRole");if(el){el.textContent=`🎭 Rôle : ${myGameRole}`;el.classList.remove("hidden");}});
 socket.on("nightStarted",d=>renderGamePhaseV8("night",d));
 socket.on("dayStarted",d=>renderGamePhaseV8("day",d));
+socket.on("voteUpdate",d=>{const el=$("selectedVote");if(el&&d.voter===currentUser?.pseudo)el.textContent=`Vote envoyé contre ${d.target}`;const counter=document.querySelector(".game-vote-counter");if(counter&&d.required)counter.textContent=`🗳️ ${d.count}/${d.required} votes`;});
 socket.on("gameFinished",d=>{myGameRole=null;myGameClassChance=0;myGameTeammates=[];if(currentUser){currentUser.gameRole=null;saveCurrentUser();updateProfile();}document.body.dataset.lgPhase="salon";const c=$("roomsList");if(c)c.innerHTML=`<div class="room-card game-result"><h2>🏁 Partie terminée</h2><h3>Victoire : ${esc(d.winner)}</h3><p>Retourne au menu ou recrée un salon.</p></div>`;loadNotificationsV8();});
 socket.on("seerResult",d=>alert(`🔮 ${d.target} est ${d.role}.`));
 socket.on("roleActionResult",d=>alert("🌙 "+d.message));
 socket.on("hunterActionRequired",d=>renderHunterChoicesV8(d));
 socket.on("hunterShot",d=>alert(`🏹 ${d.hunter} a éliminé ${d.target}.`));
-function renderGamePhaseV8(phase,data){const c=$("roomsList");if(!c)return;const players=(data.players||[]).filter(p=>p.alive);c.innerHTML=`<div class="room-card game-board"><h2>${phase==="night"?"🌙 Nuit":"☀️ Jour"} ${data.day||1}</h2><p class="game-role-card">🎭 Ton rôle : <strong>${esc(myGameRole||"...")}</strong> • chance de classe : ${myGameClassChance}%${myGameTeammates.length?`<br>🐺 Tes alliés : ${myGameTeammates.map(x=>esc(x)).join(", ")}`:""}</p><div class="game-players" id="gameTargets"></div><div id="gameActions"></div></div>`;const t=$("gameTargets");players.forEach(p=>{if(p.pseudo===currentUser.pseudo)return;const b=document.createElement("button");b.className="secondary-button game-target";b.textContent=`${p.isBot?"🤖":"👤"} ${p.pseudo}`;b.dataset.pseudo=p.pseudo;t.appendChild(b);});const a=$("gameActions");if(phase==="night"){if(myGameRole==="Loup-Garou")a.innerHTML='<p>Choisis une victime.</p>';if(myGameRole==="Voyante")a.innerHTML='<button id="seerBtn" class="main-button">🔮 Inspecter la cible sélectionnée</button>';if(myGameRole==="Sorcière")a.innerHTML='<button id="witchSave" class="main-button">🧪 Sauver la cible</button><button id="witchKill" class="secondary-button">☠️ Éliminer la cible</button>';t.querySelectorAll(".game-target").forEach(b=>b.onclick=()=>{const target=b.dataset.pseudo;if(myGameRole==="Loup-Garou")socket.emit("nightVote",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:target});if(myGameRole==="Voyante")$("seerBtn").dataset.target=target;if(myGameRole==="Sorcière"){$("witchSave").dataset.target=target;$("witchKill").dataset.target=target;}});$("seerBtn")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("seerBtn").dataset.target,action:"inspect"}));$("witchSave")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("witchSave").dataset.target,action:"save"}));$("witchKill")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:$ ("witchKill").dataset.target,action:"kill"}));}else{a.innerHTML='<p>Vote pour éliminer un joueur.</p>';t.querySelectorAll(".game-target").forEach(b=>b.onclick=()=>socket.emit("dayVote",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:b.dataset.pseudo}));}}
+function renderGamePhaseV8(phase,data){
+  const c=$("roomsList"); if(!c||!currentUser)return;
+  const allPlayers=Array.isArray(data.players)?data.players:[];
+  const alive=allPlayers.filter(p=>p.alive);
+  const canVote = phase==="day" || myGameRole==="Loup-Garou";
+  let selectedTarget=null;
+  const myVotes=Number(data.voteCount||0);
+  const totalVotes=Number(data.requiredVotes||0);
+
+  c.innerHTML=`
+    <div class="game-screen">
+      <div class="game-header">
+        <div>
+          <span class="game-phase-badge ${phase}">${phase==="night"?"🌙 NUIT":"☀️ JOUR"}</span>
+          <h2>${phase==="night"?"La nuit tombe sur le village":"Le village doit voter"} <small>Jour ${data.day||1}</small></h2>
+        </div>
+        <div class="game-vote-counter">${totalVotes?`🗳️ ${myVotes}/${totalVotes} votes`:""}</div>
+      </div>
+
+      <div class="game-role-card featured">
+        <div class="role-label">TON RÔLE</div>
+        <div class="my-role">🎭 ${esc(myGameRole||"Chargement...")}</div>
+        ${myGameRole==="Loup-Garou"&&myGameTeammates.length?`<div class="teammates">🐺 Alliés : ${myGameTeammates.map(x=>esc(x)).join(", ")}</div>`:""}
+      </div>
+
+      <div class="game-instruction">
+        ${phase==="night" && myGameRole==="Loup-Garou"?"Choisis une cible puis confirme ton vote. Les autres rôles agissent secrètement.":
+          phase==="night"&&myGameRole==="Voyante"?"Choisis un joueur puis utilise ton pouvoir pour découvrir son rôle.":
+          phase==="night"&&myGameRole==="Sorcière"?"Choisis une cible puis utilise une potion disponible.":
+          phase==="night"?"La nuit, reste attentif : ton rôle peut avoir une action spéciale.":
+          "🗳️ Choisis le joueur que tu veux éliminer, puis confirme ton vote."}
+      </div>
+
+      <div class="game-players-grid" id="gameTargets"></div>
+      <div class="game-action-panel" id="gameActions"></div>
+    </div>`;
+
+  const t=$("gameTargets"), a=$("gameActions");
+  const targets=alive.filter(p=>p.pseudo!==currentUser.pseudo);
+  targets.forEach(p=>{
+    const card=document.createElement("button");
+    card.type="button";
+    card.className="game-player-card";
+    card.dataset.pseudo=p.pseudo;
+    card.innerHTML=`<span class="player-avatar">${p.isBot?"🤖":"👤"}</span><span class="player-name">${esc(p.pseudo)}</span><span class="player-status">${p.isBot?"BOT":"JOUEUR"}</span>`;
+    card.onclick=()=>{
+      selectedTarget=p.pseudo;
+      t.querySelectorAll(".game-player-card").forEach(x=>x.classList.remove("selected"));
+      card.classList.add("selected");
+      if(phase==="day"||myGameRole==="Loup-Garou"){
+        const action=$("voteConfirm"); if(action){action.disabled=false;action.textContent=`🗳️ Voter contre ${p.pseudo}`;}
+      }
+      if(myGameRole==="Voyante") $("seerBtn")?.removeAttribute("disabled");
+      if(myGameRole==="Sorcière"){ $("witchSave")?.removeAttribute("disabled"); $("witchKill")?.removeAttribute("disabled"); }
+    };
+    t.appendChild(card);
+  });
+
+  if(phase==="day"||myGameRole==="Loup-Garou"){
+    a.innerHTML=`<div class="vote-panel"><strong>🗳️ Vote</strong><span id="selectedVote">Aucune cible sélectionnée</span><button id="voteConfirm" class="main-button" disabled>🗳️ Sélectionne un joueur</button><small>Ton vote est secret et ne peut être envoyé qu'une fois par phase.</small></div>`;
+    $("voteConfirm").onclick=()=>{if(!selectedTarget)return;const event=phase==="day"?"dayVote":"nightVote";socket.emit(event,{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:selectedTarget});$("voteConfirm").disabled=true;$("voteConfirm").textContent="✅ Vote envoyé";t.querySelectorAll(".game-player-card").forEach(x=>x.disabled=true);};
+  }
+  if(phase==="night"&&myGameRole==="Voyante"){
+    a.innerHTML=`<div class="vote-panel"><strong>🔮 Pouvoir de la Voyante</strong><span>Choisis une cible.</span><button id="seerBtn" class="main-button" disabled>🔮 Découvrir le rôle</button></div>`;
+    $("seerBtn").onclick=()=>{if(!selectedTarget)return;socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:selectedTarget,action:"inspect"});$("seerBtn").disabled=true;};
+  }
+  if(phase==="night"&&myGameRole==="Sorcière"){
+    a.innerHTML=`<div class="vote-panel"><strong>🧪 Pouvoir de la Sorcière</strong><span>Choisis une cible puis une potion.</span><div class="game-actions"><button id="witchSave" class="main-button" disabled>🛡️ Sauver</button><button id="witchKill" class="secondary-button" disabled>☠️ Éliminer</button></div></div>`;
+    $("witchSave").onclick=()=>{if(!selectedTarget)return;socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:selectedTarget,action:"save"});$("witchSave").disabled=true;$("witchKill").disabled=true;};
+    $("witchKill").onclick=()=>{if(!selectedTarget)return;socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:selectedTarget,action:"kill"});$("witchSave").disabled=true;$("witchKill").disabled=true;};
+  }
+}
+
 function renderHunterChoicesV8(d){const c=$("roomsList");if(!c)return;c.innerHTML=`<div class="room-card"><h2>🏹 Pouvoir du Chasseur</h2><p>Choisis un joueur.</p><div id="hunterTargets"></div></div>`;const t=$("hunterTargets");(d.targets||[]).forEach(x=>{const b=document.createElement("button");b.className="main-button";b.textContent=x;b.onclick=()=>socket.emit("hunterAction",{code:currentRoomCode,pseudo:d.hunter,targetPseudo:x});t.appendChild(b);});}
 
 /* État salon / classé */
@@ -2239,8 +2335,51 @@ async function loadFriendsV8(){
  try{const d=await apiJson(`/api/friends/${encodeURIComponent(currentUser.pseudo)}`);c.innerHTML="";(d.friends||[]).forEach(f=>{const u=f.user||{};const card=document.createElement("div");card.className="friend-card";card.innerHTML=`<h3>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</h3><p>${f.online?"🟢 En ligne":"⚫ Hors ligne"} • ${f.inRoom?"🎮 En partie":"🟢 Disponible"}</p><button class="secondary-button chat-request">💬 Demander le chat</button><button class="main-button chat-open">💬 Ouvrir le chat</button>`;card.querySelector(".chat-request").onclick=async()=>{try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:u.pseudo})});alert("✅ Demande envoyée.");}catch(e){alert("❌ "+e.message);}};card.querySelector(".chat-open").onclick=()=>openChatV8(u.pseudo);c.appendChild(card);});if(!d.friends?.length)c.textContent="Aucun ami.";}catch(e){c.textContent="❌ "+e.message;}
 }
 $("friendsButton")?.addEventListener("click",loadFriendsV8);
-async function openChatV8(friendPseudo){currentChatFriend=friendPseudo;const c=$("friendResult");if(!c)return;try{const status=await apiJson(`/api/chat/status/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);if(!status.allowed){if(!status.pending){if(!confirm("Le chat doit être accepté. Envoyer une demande ?"))return;try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo})});}catch(e){alert("❌ "+e.message);}}return;}const d=await apiJson(`/api/chat/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);c.innerHTML=`<div class="chat-box"><h3>💬 ${esc(friendPseudo)}</h3><div id="chatMessages">${(d.messages||[]).map(m=>`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`).join("")}</div><div class="chat-compose"><input id="chatInput" maxlength="500" placeholder="Ton message"><button id="chatSend" class="main-button">Envoyer</button></div></div>`;$("chatSend").onclick=async()=>{try{const x=await apiJson("/api/chat/send-safe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo,text:$("chatInput").value})});$("chatInput").value="";const m=$("chatMessages");m.insertAdjacentHTML("beforeend",`<p><b>${esc(x.message.from)} :</b> ${esc(x.message.text)}</p>`);}catch(e){alert("❌ "+e.message);}};}catch(e){alert("❌ "+e.message);}}
-socket.on("chatMessage",m=>{if(currentChatFriend&&normalizeClient(m.from)===normalizeClient(currentChatFriend)){const c=$("chatMessages");if(c)c.insertAdjacentHTML("beforeend",`<p><b>${esc(m.from)} :</b> ${esc(m.text)}</p>`);}});
+async function openChatV8(friendPseudo){
+  currentChatFriend=friendPseudo;
+  const c=$("friendResult"); if(!c||!currentUser)return;
+  c.innerHTML='<div class="chat-box chat-loading">💬 Chargement du chat sécurisé…</div>';
+  try{
+    const status=await apiJson(`/api/chat/status/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);
+    if(!status.allowed){
+      c.innerHTML=`<div class="chat-box chat-locked"><h3>🔒 Chat avec ${esc(friendPseudo)}</h3><p>Le chat est disponible uniquement après acceptation des deux côtés.</p><div class="chat-safe-note">🛡️ Les insultes sont bloquées automatiquement.</div></div>`;
+      if(status.pendingIncoming)c.insertAdjacentHTML('beforeend','<p>📨 Cette personne t’a envoyé une demande de chat. Va dans tes notifications pour accepter ou refuser.</p>');
+      else if(status.pendingOutgoing)c.insertAdjacentHTML('beforeend','<p>⏳ Demande envoyée. En attente de réponse.</p>');
+      else c.insertAdjacentHTML('beforeend','<button id="chatRequestNow" class="main-button">💬 Envoyer une demande de chat</button>');
+      $("chatRequestNow")?.addEventListener("click",async()=>{try{await apiJson("/api/chat/request",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo})});alert("✅ Demande de chat envoyée.");openChatV8(friendPseudo);}catch(e){alert("❌ "+e.message);}});
+      return;
+    }
+    const d=await apiJson(`/api/chat/${encodeURIComponent(currentUser.pseudo)}/${encodeURIComponent(friendPseudo)}`);
+    c.innerHTML=`<div class="chat-box">
+      <div class="chat-head"><div><h3>💬 ${esc(friendPseudo)}</h3><small>🔒 Chat entre amis • insultes bloquées</small></div><span class="chat-online">● sécurisé</span></div>
+      <div id="chatMessages" class="chat-messages">${(d.messages||[]).map(m=>`<div class="chat-message ${normalizeClient(m.from)===normalizeClient(currentUser.pseudo)?'mine':'theirs'}"><b>${esc(m.from)}</b><span>${esc(m.text)}</span><small>${new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></div>`).join('') || '<div class="chat-empty">Aucun message. Commence la discussion 👋</div>'}</div>
+      <div class="chat-compose"><input id="chatInput" maxlength="500" autocomplete="off" placeholder="Écris un message respectueux…"><button id="chatSend" class="main-button">Envoyer</button></div>
+      <div class="chat-rules">🛡️ Pas d’insultes • max. 500 caractères • réservé aux amis</div>
+    </div>`;
+    const send=async()=>{
+      const input=$("chatInput"); if(!input)return;
+      const text=input.value.trim(); if(!text)return;
+      const button=$("chatSend"); button.disabled=true;
+      try{
+        const x=await apiJson("/api/chat/send-safe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({fromPseudo:currentUser.pseudo,toPseudo:friendPseudo,text})});
+        input.value=""; appendChatMessageV12(x.message,true);
+      }catch(e){alert("❌ "+e.message);}finally{button.disabled=false;input.focus();}
+    };
+    $("chatSend").onclick=send;
+    $("chatInput").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}});
+    scrollChatV12();
+  }catch(e){c.innerHTML=`<div class="chat-box">❌ ${esc(e.message)}</div>`;}
+}
+function appendChatMessageV12(m){
+  const box=$("chatMessages");if(!box)return;
+  box.querySelector('.chat-empty')?.remove();
+  const mine=normalizeClient(m.from)===normalizeClient(currentUser.pseudo);
+  const el=document.createElement('div');el.className='chat-message '+(mine?'mine':'theirs');
+  el.innerHTML=`<b>${esc(m.from)}</b><span>${esc(m.text)}</span><small>${new Date(m.createdAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small>`;
+  box.appendChild(el);scrollChatV12();
+}
+function scrollChatV12(){const b=$("chatMessages");if(b)b.scrollTop=b.scrollHeight;}
+
 function normalizeClient(x){return String(x||"").trim().toLowerCase();}
 
 /* RÉCOMPENSE ADMIN : le type trophées */
