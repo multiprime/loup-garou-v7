@@ -1137,3 +1137,14 @@ body[data-lg-phase="loading"]{background:radial-gradient(circle at 50% 50%,rgba(
 body.blood-moon-active[data-lg-phase="salon"]{background:radial-gradient(circle at 50% 25%,rgba(155,20,35,.35),transparent 45%),linear-gradient(135deg,#080808,#1a080b 55%,#060606)}
 body.blood-moon-active[data-lg-phase="search"]{background:radial-gradient(circle at 50% 50%,rgba(200,25,45,.48),transparent 42%),#080607}
 body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circle at 50% 50%,rgba(235,35,55,.4),transparent 40%),#060506}
+
+/* V9 - rôle secret du joueur */
+.player-game-role,
+.game-role-card {
+  margin-top: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(190, 40, 40, .45);
+  border-radius: 10px;
+  background: rgba(70, 8, 12, .35);
+}
+.player-game-role { font-size: .9rem; }
