@@ -1148,3 +1148,8 @@ body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circl
   background: rgba(70, 8, 12, .35);
 }
 .player-game-role { font-size: .9rem; }
+
+
+/* Monnaie : vraie pièce CSS */
+.coin-icon{display:inline-block;width:22px;height:22px;border-radius:50%;background:linear-gradient(145deg,#fff2a8,#e0a51a 55%,#9b6500);border:2px solid #f7d45a;box-shadow:inset 0 0 0 2px rgba(255,255,255,.22),0 2px 8px rgba(0,0,0,.35);vertical-align:-5px;position:relative;margin-right:5px;}
+.coin-icon::after{content:'₡';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#7a4b00;font-weight:900;font-size:13px;text-shadow:0 1px rgba(255,255,255,.35);}
