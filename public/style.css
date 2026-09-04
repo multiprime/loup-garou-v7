@@ -741,3 +741,399 @@ body.blood-moon-active .top-bar {
     grid-template-columns: 1fr;
   }
 }
+/* =========================================================
+   REDESIGN VISUEL — STYLE INSPIRE DE LA MAQUETTE FOURNIE
+   Noir profond / cartes larges / bordures fines / accent rouge
+========================================================= */
+
+:root {
+  --ui-bg: #0b0b0b;
+  --ui-surface: #151515;
+  --ui-surface-2: #181818;
+  --ui-border: #3a3a3a;
+  --ui-border-soft: #303030;
+  --ui-text: #eeeeee;
+  --ui-muted: #9b9b9b;
+  --ui-red: #7f2525;
+  --ui-red-soft: rgba(127, 37, 37, 0.18);
+  --ui-gold: #e3c58c;
+}
+
+html {
+  background: var(--ui-bg);
+}
+
+body {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(83, 18, 18, 0.11), transparent 38%),
+    #0b0b0b;
+  color: var(--ui-text);
+  letter-spacing: 0.01em;
+}
+
+/* Barre supérieure : plus discrète pour laisser le menu respirer */
+.top-bar {
+  min-height: 72px;
+  padding: 12px 34px;
+  background: rgba(10, 10, 10, 0.96);
+  border-bottom: 1px solid #292929;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.32);
+}
+
+.profile-icon {
+  width: 48px;
+  height: 48px;
+  background: #151515;
+  border: 1px solid #404040;
+  box-shadow: inset 0 0 18px rgba(255,255,255,0.025);
+}
+
+#playerName {
+  color: #f0f0f0;
+  font-size: 16px;
+}
+
+#playerTitle {
+  color: #777;
+}
+
+.player-stats {
+  gap: 8px;
+}
+
+.player-stats span {
+  padding: 6px 10px;
+  border: 1px solid #2f2f2f;
+  border-radius: 7px;
+  background: #111;
+  color: #888;
+}
+
+.player-stats b {
+  color: #ddd;
+}
+
+/* Le menu est la pièce maîtresse */
+.menu-grid {
+  width: min(1160px, calc(100% - 48px));
+  margin: 38px auto 55px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.menu-button {
+  min-height: 145px;
+  padding: 24px;
+  border: 1px solid var(--ui-border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #171717, #121212);
+  color: #eee;
+  gap: 13px;
+  font-size: 20px;
+  font-weight: 400;
+  box-shadow:
+    0 12px 28px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255,255,255,0.015);
+  transition: transform 0.18s ease, border-color 0.18s ease,
+              background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.menu-button > span:first-child,
+.menu-button::first-letter {
+  font-size: 27px;
+}
+
+.menu-button span {
+  color: #e4e4e4;
+}
+
+.menu-button:hover {
+  transform: translateY(-2px);
+  border-color: #555;
+  background: linear-gradient(145deg, #1b1b1b, #141414);
+  box-shadow:
+    0 15px 35px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(127, 37, 37, 0.08);
+}
+
+.menu-button:active {
+  transform: translateY(0);
+}
+
+/* Le classement reprend le léger rouge de la maquette */
+#rankingButton {
+  background:
+    linear-gradient(145deg, rgba(74, 17, 17, 0.58), rgba(24, 14, 14, 0.96));
+  border-color: #4a3030;
+}
+
+#rankingButton:hover {
+  border-color: #704040;
+  box-shadow: 0 14px 35px rgba(80, 15, 15, 0.2);
+}
+
+/* La Lune de Sang garde une identité spéciale */
+#bloodMoonButton {
+  background:
+    linear-gradient(145deg, rgba(88, 12, 12, 0.72), rgba(24, 8, 8, 0.98));
+  border-color: #6b2929;
+}
+
+#bloodMoonButton:hover {
+  border-color: #9b3b3b;
+}
+
+#adminButton {
+  background: linear-gradient(145deg, #1d1810, #121212);
+  border-color: #54462e;
+}
+
+/* Annonce : même langage visuel que les cartes */
+.announcement-box {
+  width: min(1160px, calc(100% - 48px));
+  min-height: 76px;
+  margin: 24px auto 8px;
+  padding: 18px 21px;
+  border: 1px solid #3c3430;
+  border-radius: 14px;
+  background: #151515;
+  color: #cfcfcf;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+}
+
+/* Boutons généraux */
+.main-button,
+.secondary-button,
+.danger-button,
+.logout-button,
+.back-button {
+  border-radius: 9px;
+  border-color: #404040;
+  box-shadow: none;
+}
+
+.main-button {
+  background: #651d1d;
+  border-color: #8a3333;
+}
+
+.main-button:hover {
+  background: #792424;
+}
+
+.secondary-button {
+  background: #181818;
+  color: #ddd;
+}
+
+.secondary-button:hover {
+  background: #222;
+  border-color: #555;
+}
+
+.danger-button {
+  background: #5e1818;
+  border-color: #843030;
+}
+
+.logout-button {
+  margin: 0 auto 30px;
+  display: block;
+  background: #121212;
+  border-color: #303030;
+  color: #888;
+}
+
+/* Toutes les pages utilisent désormais le même style de surface */
+.page {
+  width: min(1160px, calc(100% - 48px));
+  padding: 42px 0 65px;
+}
+
+.page h2 {
+  margin-bottom: 26px;
+  color: #eee;
+  font-size: 30px;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+.page > p {
+  color: #8f8f8f;
+}
+
+.card,
+.class-card,
+.quest-card,
+.friend-card,
+.ranking-card,
+.shop-card,
+.settings-card,
+.admin-card,
+.room-card {
+  border: 1px solid #353535;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #181818, #121212);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+.card h3,
+.class-card h3,
+.quest-card h3,
+.friend-card h3,
+.shop-card h3,
+.settings-card h3,
+.admin-card h3 {
+  color: #e2e2e2;
+}
+
+.card p,
+.class-card p,
+.quest-card p,
+.friend-card p,
+.shop-card p {
+  color: #929292;
+}
+
+/* Salon */
+#gameLobby {
+  background: transparent;
+}
+
+.room-card {
+  padding: 20px;
+}
+
+.room-card:hover {
+  border-color: #4b4b4b;
+}
+
+/* Inputs */
+.join-room input,
+.friend-search input,
+.admin-card input,
+.admin-card select,
+.admin-card textarea,
+.settings-card input {
+  background: #101010;
+  border-color: #353535;
+  color: #eee;
+}
+
+.join-room input:focus,
+.friend-search input:focus,
+.admin-card input:focus,
+.admin-card select:focus,
+.admin-card textarea:focus,
+.settings-card input:focus {
+  border-color: #6d3030;
+  box-shadow: 0 0 0 2px rgba(109,48,48,0.12);
+}
+
+/* Notifications : sobres, comme les cartes */
+.notification {
+  border-color: #3d3d3d;
+  border-radius: 13px;
+  background: rgba(20, 20, 20, 0.98);
+}
+
+.notification button {
+  background: #5e1a1a;
+  border-color: #793030;
+  color: #eee;
+}
+
+/* Authentification */
+.auth-box {
+  border-color: #3b3b3b;
+  border-radius: 18px;
+  background: #141414;
+}
+
+.auth-box h1,
+.auth-box h2 {
+  color: #eee;
+}
+
+.auth-box input {
+  background: #0d0d0d;
+  border-color: #363636;
+}
+
+.auth-tabs button {
+  background: #161616;
+  border-color: #353535;
+}
+
+.auth-tabs button.active {
+  background: #5d1919;
+  border-color: #7d2c2c;
+}
+
+/* Chargement */
+.loading-screen {
+  background:
+    radial-gradient(circle at center, rgba(72, 13, 13, 0.36), rgba(0, 0, 0, 0.98) 68%);
+}
+
+.loading-box h2 {
+  color: #e6e6e6;
+}
+
+.loading-spinner {
+  border-top-color: #8b3030;
+}
+
+/* Responsive : on conserve les grandes cartes, puis on passe en 2/1 colonne */
+@media (max-width: 900px) {
+  .menu-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .top-bar {
+    padding: 12px 18px;
+  }
+
+  .menu-grid {
+    width: calc(100% - 28px);
+    margin-top: 24px;
+    gap: 14px;
+    grid-template-columns: 1fr;
+  }
+
+  .menu-button {
+    min-height: 118px;
+    border-radius: 15px;
+  }
+
+  .announcement-box,
+  .page {
+    width: calc(100% - 28px);
+  }
+}
+
+/* =====================================================
+   V8 — INTERFACE SALON / QUÊTES / ÉVÉNEMENTS
+===================================================== */
+.ranked-toggle,.switch-row,.ranked-room-row{display:flex;align-items:center;gap:10px;margin:14px 0;padding:12px 14px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.025)}
+.ranked-toggle input,.switch-row input,.ranked-room-row input{accent-color:#8f1f2c}
+.room-friends{margin-top:18px;border-top:1px solid rgba(255,255,255,.1);padding-top:16px}
+.room-friend,.room-player-row,.admin-user-row,.admin-class-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin:7px 0;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.025)}
+.room-friend small{opacity:.75}
+.quest-progress,.blood-gauge{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);background:#090909;border-radius:999px}
+.quest-progress{height:9px;margin:12px 0}.quest-progress div{height:100%;background:linear-gradient(90deg,#6e1522,#c13a4b);border-radius:999px}
+.notification-card{padding:14px;margin:8px 0;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(25,10,12,.7)}
+.notification-card button{margin:5px 5px 0 0}
+.blood-moon-event{display:flex;align-items:stretch;gap:28px;max-width:620px;margin:auto}.blood-ladder{display:flex;flex-direction:column;justify-content:space-between;gap:18px;flex:1}.blood-rung{padding:16px;border:1px solid rgba(160,30,45,.35);border-radius:14px;background:rgba(75,10,18,.3)}.blood-rung.final{border-color:rgba(220,70,85,.65)}
+.blood-gauge{width:48px;min-height:280px;display:flex;align-items:flex-end;justify-content:center}.blood-gauge-fill{width:100%;background:linear-gradient(0deg,#64121d,#d33b4d);border-radius:999px;transition:height .4s}.blood-gauge strong{position:absolute;top:50%;transform:translateY(-50%)}
+.title-list{display:flex;flex-wrap:wrap;gap:8px}.chat-box{border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:14px}.chat-box #chatMessages{min-height:120px;max-height:280px;overflow:auto;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:12px}.chat-compose{display:flex;gap:8px}.chat-compose input{flex:1}.game-target{margin:5px}.game-actions{display:flex;gap:8px;flex-wrap:wrap}.game-result{border-color:rgba(190,45,60,.45)}
+@media(max-width:700px){.blood-moon-event{gap:12px}.blood-gauge{width:38px}.room-friend,.room-player-row,.admin-user-row,.admin-class-row{flex-wrap:wrap}.chat-compose{flex-direction:column}}
+body[data-lg-phase="salon"]{background:radial-gradient(circle at 50% 20%,rgba(90,15,25,.22),transparent 45%),#0b0b0b}
+body[data-lg-phase="search"]{background:radial-gradient(circle at 50% 50%,rgba(120,25,35,.35),transparent 40%),#090909}
+body[data-lg-phase="loading"]{background:radial-gradient(circle at 50% 50%,rgba(180,30,45,.28),transparent 42%),#070707}
+body.blood-moon-active[data-lg-phase="salon"]{background:radial-gradient(circle at 50% 25%,rgba(155,20,35,.35),transparent 45%),linear-gradient(135deg,#080808,#1a080b 55%,#060606)}
+body.blood-moon-active[data-lg-phase="search"]{background:radial-gradient(circle at 50% 50%,rgba(200,25,45,.48),transparent 42%),#080607}
+body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circle at 50% 50%,rgba(235,35,55,.4),transparent 40%),#060506}
