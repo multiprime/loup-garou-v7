@@ -1226,3 +1226,6 @@ body.in-game .v19-game { max-width:1180px; min-height:calc(100vh - 20px); margin
 .game-night-order{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 20px}.game-night-order span{padding:8px 12px;border:1px solid #3b3b3b;border-radius:999px;background:#111;color:#777;font-size:12px}.game-night-order .active{color:#f0d39e;border-color:#6a4b2d;box-shadow:0 0 18px rgba(180,120,50,.15)}
 .game-instruction{font-size:17px;line-height:1.55;min-height:74px;display:flex;align-items:center;justify-content:center;text-align:center}
 .game-v19-timer{min-width:180px;padding:14px 18px;font-size:18px;font-weight:700}
+
+
+.admin-dashboard-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}.admin-stat{padding:16px;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(10,12,25,.55);display:flex;flex-direction:column;gap:3px;text-align:center}.admin-stat b{font-size:24px}.admin-stat strong{font-size:24px}.admin-stat span{opacity:.72;font-size:13px}.admin-help{opacity:.78;margin-bottom:0}@media(max-width:800px){.admin-dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
