@@ -28,6 +28,9 @@ const ADMIN_PSEUDO =
     .toLowerCase();
 
 // Stockage persistant : sur Render, définissez DATA_DIR=/data sur le disque persistant.
+// Render Free n'autorise pas l'écriture dans /data sans disque persistant.
+// Par défaut, on utilise le dossier de l'application pour que le serveur démarre.
+// Pour un stockage persistant plus tard : DATA_DIR=/var/data.
 const DATA_DIR = process.env.DATA_DIR || __dirname;
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_FILE = path.join(DATA_DIR, "data.json");
@@ -57,7 +60,12 @@ function defaultDatabase() {
       text: "Bienvenue dans Loup-Garou V7 🐺"
     },
     bloodMoonProgress: {},
-    bloodMoonManualUntil: 0
+    bloodMoonManualUntil: 0,
+    globalBoosts: {
+      coins: { multiplier: 1, until: 0 },
+      xp: { multiplier: 1, until: 0 },
+      trophies: { multiplier: 1, until: 0 }
+    }
   };
 }
 
@@ -99,6 +107,12 @@ function loadDatabase() {
 }
 
 let db = loadDatabase();
+db.globalBoosts = db.globalBoosts || {};
+["coins","xp","trophies"].forEach(type => {
+  db.globalBoosts[type] = db.globalBoosts[type] || { multiplier: 1, until: 0 };
+  db.globalBoosts[type].multiplier = Number(db.globalBoosts[type].multiplier || 1);
+  db.globalBoosts[type].until = Number(db.globalBoosts[type].until || 0);
+});
 db.users.forEach(ensureUserState);
 
 function saveDatabase() {
@@ -997,6 +1011,26 @@ function checkGameWinner(game) {
   return false;
 }
 
+function getActiveGlobalMultiplier(type) {
+  const boost = db.globalBoosts?.[type];
+  if (!boost) return 1;
+  if (Number(boost.until || 0) <= Date.now()) return 1;
+  return Math.max(1, Number(boost.multiplier || 1));
+}
+
+function getGlobalBoostPayload() {
+  const now = Date.now();
+  const result = {};
+  ["coins","xp","trophies"].forEach(type => {
+    const b = db.globalBoosts?.[type] || { multiplier: 1, until: 0 };
+    result[type] = {
+      multiplier: Number(b.until || 0) > now ? Math.max(1, Number(b.multiplier || 1)) : 1,
+      until: Number(b.until || 0)
+    };
+  });
+  return result;
+}
+
 function finishGame(room) {
   const game=room.game; if(!game || game.phase==="finished") return;
   game.phase="finished"; const blood=getBloodMoonStatus();
@@ -1005,13 +1039,21 @@ function finishGame(room) {
     const isWolf=player.role==="Loup-Garou";
     if(blood.active){registerBloodQuest(user,"bloodPlayed",1);if(game.ranked)registerBloodQuest(user,"bloodRanked",1);}
     const won=(game.winner==="Loups-Garous"&&isWolf)||(game.winner==="Villageois"&&!isWolf);
-    let xp=50+(won?100:0), coins=25+(won?50:0), trophies=game.ranked?(won?30:-10):0;
+    // Chaque victoire rapporte toujours 1 trophée, même en partie normale.
+    // Les défaites ne retirent pas de trophée.
+    let xp=50+(won?100:0), coins=25+(won?50:0), trophies=won?1:0;
     if(blood.active){xp*=2;coins*=2;trophies*=2;}
     user.boosts=user.boosts||{};
     const nowBoost=Date.now();
     if(Number(user.boosts.double_coins_until||0)>nowBoost) coins*=2;
     if(Number(user.boosts.double_xp_until||0)>nowBoost) xp*=2;
     if(Number(user.boosts.double_trophies_until||0)>nowBoost) trophies*=2;
+
+    // Bonus globaux activés depuis le panneau Admin.
+    coins *= getActiveGlobalMultiplier("coins");
+    xp *= getActiveGlobalMultiplier("xp");
+    trophies *= getActiveGlobalMultiplier("trophies");
+
     applyReward(user,{xp,coins,trophies});
     user.gamesPlayed=Number(user.gamesPlayed||0)+1; registerQuestStat(user,"gamesPlayed",1);
     if(won){user.gamesWon=Number(user.gamesWon||0)+1;registerQuestStat(user,"gamesWon",1);if(blood.active)registerBloodQuest(user,"bloodWon",1);}
@@ -1952,7 +1994,7 @@ app.post(
 
 app.get("/api/admin/bootstrap",(req,res)=>{
   if(normalizePseudo(req.query.adminPseudo)!==ADMIN_PSEUDO)return res.status(403).json({message:"Accès refusé."});
-  res.json({users:db.users.map(publicUser),classes:CLASSES,announcement:db.announcements});
+  res.json({users:db.users.map(publicUser),classes:CLASSES,announcement:db.announcements,globalBoosts:getGlobalBoostPayload()});
 });
 
 app.post("/api/admin/reward-all-now",(req,res)=>{
@@ -1962,6 +2004,44 @@ app.post("/api/admin/reward-all-now",(req,res)=>{
   let count=0; db.users.forEach(u=>{if(req.body.onlineOnly&&!isUserOnline(u.pseudo))return;addNotification(u.pseudo,{title:"🎁 Récompense du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Appuie sur Récupérer.`,type:"creator",reward});count++;}); saveDatabase(); res.json({message:`Récompense envoyée à ${count} joueur(s).`});
 });
 
+
+
+app.post("/api/admin/global-boost", (req,res)=>{
+  if(normalizePseudo(req.body.adminPseudo)!==ADMIN_PSEUDO){
+    return res.status(403).json({message:"Accès refusé."});
+  }
+
+  const type=String(req.body.type||"");
+  const allowed=["coins","xp","trophies"];
+  const multiplier=Number(req.body.multiplier||1);
+  const durationMinutes=Math.max(1,Math.min(1440,Number(req.body.durationMinutes||10)));
+
+  if(!allowed.includes(type)){
+    return res.status(400).json({message:"Type de bonus invalide."});
+  }
+  if(![1,2,4,5,10].includes(multiplier)){
+    return res.status(400).json({message:"Multiplicateur invalide."});
+  }
+
+  if(multiplier===1){
+    db.globalBoosts[type]={multiplier:1,until:0};
+  }else{
+    db.globalBoosts[type]={
+      multiplier,
+      until:Date.now()+durationMinutes*60*1000
+    };
+  }
+
+  saveDatabase();
+  io.emit("globalBoostUpdated",{type,boost:db.globalBoosts[type]});
+
+  res.json({
+    message: multiplier===1
+      ? `Bonus ${type} désactivé.`
+      : `Bonus ${type} x${multiplier} activé pendant ${durationMinutes} minutes.`,
+    globalBoosts:getGlobalBoostPayload()
+  });
+});
 
 /* =========================================
    API : AMIS
@@ -2626,7 +2706,7 @@ function emitPublicGameState(room,event="gameState"){
   const g=room.game;if(!g)return;
   const voters=g.phase==="night"?g.players.filter(p=>p.alive&&p.role==="Loup-Garou"):g.players.filter(p=>p.alive);
   const votes=g.phase==="night"?g.nightVotes||{}:g.dayVotes||{};
-  io.to(room.code).emit(event,{phase:g.phase,day:g.day,winner:g.winner,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),ranked:g.ranked,voteCount:Object.keys(votes).length,requiredVotes:voters.length,chat:(g.chat||[]).slice(-50)});
+  io.to(room.code).emit(event,{phase:g.phase,day:g.day,winner:g.winner,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),ranked:g.ranked,voteCount:Object.keys(votes).length,requiredVotes:voters.length,chat:(g.chat||[]).slice(-50),nightActionsAvailable:{wolvesVote:g.phase==="night",seer:g.phase==="night",witch:g.phase==="night"}});
 }
 function startNightPhase(room){const g=room.game;if(!g||g.phase==="finished")return;g.phase="night";g.nightVotes={};g.nightActions=g.nightActions||{saved:null,witchKill:null,witchUsed:false};emitPublicGameState(room,"nightStarted");
   const wolves=g.players.filter(p=>p.alive&&p.role==="Loup-Garou"); wolves.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{if(room.game?.phase!=="night")return;const target=randomAliveTarget(g,p=>p.role!=="Loup-Garou");if(target)g.nightVotes[bot.pseudo]=target.pseudo;tryResolveNight(room);},800+i*350));
@@ -3110,7 +3190,9 @@ io.on(
     /* =====================================
        ACTIONS DE PARTIE
     ===================================== */
-    socket.on("nightVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="night")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive||v.role!=="Loup-Garou")return;g.nightVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.nightVotes).length,required:g.players.filter(p=>p.alive&&p.role==="Loup-Garou").length});tryResolveNight(room);saveDatabase();});
+    socket.on("nightVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="night")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive||v.role!=="Loup-Garou")return;
+if(g.nightVotes[v.pseudo]){socket.emit("voteError",{message:"Tu as déjà voté cette nuit."});return;}
+g.nightVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.nightVotes).length,required:g.players.filter(p=>p.alive&&p.role==="Loup-Garou").length});tryResolveNight(room);saveDatabase();});
     socket.on("gameChat",(data)=>{
       const room=findRoom(data?.code);
       const pseudo=String(data?.pseudo||"");
@@ -3129,7 +3211,9 @@ io.on(
 
     socket.on("roleAction",(data)=>{const room=findRoom(data?.code);if(!room)return;handleRoleAction(room,data);saveDatabase();});
     socket.on("hunterAction",(data)=>{const room=findRoom(data?.code);const g=room?.game;if(!g)return;const hunter=g.players.find(p=>p.pseudo===data?.pseudo&&p.role==="Chasseur"&&!p.alive);const target=g.players.find(p=>p.pseudo===data?.targetPseudo&&p.alive);if(!hunter||!target)return;target.alive=false;io.to(room.code).emit("hunterShot",{hunter:hunter.pseudo,target:target.pseudo});if(checkGameWinner(g))finishGame(room);else if(g.phase==="day"){g.day++;startNightPhase(room);}else startDayPhase(room,null);});
-    socket.on("dayVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="day")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive)return;g.dayVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.dayVotes).length,required:g.players.filter(p=>p.alive).length});tryResolveDay(room);saveDatabase();});
+    socket.on("dayVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="day")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive)return;
+if(g.dayVotes[v.pseudo]){socket.emit("voteError",{message:"Tu as déjà voté aujourd'hui."});return;}
+g.dayVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.dayVotes).length,required:g.players.filter(p=>p.alive).length});tryResolveDay(room);saveDatabase();});
 
     /* =====================================
        LISTE DES SALONS
