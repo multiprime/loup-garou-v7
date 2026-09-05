@@ -28,9 +28,7 @@ const ADMIN_PSEUDO =
     .toLowerCase();
 
 // Stockage persistant : sur Render, définissez DATA_DIR=/data sur le disque persistant.
-const DATA_DIR =
-  process.env.DATA_DIR ||
-  (process.env.RENDER ? "/data" : __dirname);
+const DATA_DIR = process.env.DATA_DIR || __dirname;
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_FILE = path.join(DATA_DIR, "data.json");
 
