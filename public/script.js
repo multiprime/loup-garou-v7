@@ -297,16 +297,28 @@ async function refreshSavedAccount(pseudo) {
     const response = await fetch(
       `/api/profile/${encodeURIComponent(pseudo)}`
     );
-    if (!response.ok) return false;
-
-    const data = await response.json();
-    if (data.user) {
-      currentUser = data.user;
-      saveCurrentUser();
-      updateProfile();
-      updateAdminButton();
-      return true;
+    const data = await response.json().catch(()=>({}));
+    if (!response.ok || !data.user) {
+      // Le localStorage ne doit jamais être considéré comme le compte officiel.
+      // Si le serveur ne connaît plus le compte, on demande une vraie reconnexion.
+      currentUser = null;
+      localStorage.removeItem("lgv7_user");
+      socket.emit("userOffline");
+      $("menuScreen")?.classList.add("hidden");
+      $("authScreen")?.classList.remove("hidden");
+      showLogin();
+      if ($("authMessage")) {
+        $("authMessage").textContent = "❌ Compte non retrouvé sur le serveur. Reconnecte-toi.";
+      }
+      return false;
     }
+
+    currentUser = data.user;
+    saveCurrentUser();
+    updateProfile();
+    updateAdminButton();
+    socket.emit("userOnline", { pseudo: currentUser.pseudo });
+    return true;
   } catch (error) {
     console.warn("Impossible de recharger le compte :", error);
   }
@@ -846,22 +858,17 @@ function renderQuests(quests) {
 
 $("createRoomButton")?.addEventListener(
   "click",
-  () => {
-    if (!currentUser) {
-      alert(
-        "❌ Tu dois être connecté."
-      );
-
+  async () => {
+    if (!currentUser?.pseudo) {
+      alert("❌ Tu dois être connecté.");
       return;
     }
 
-    socket.emit(
-      "createRoom",
-      {
-        pseudo:
-          currentUser.pseudo
-      }
-    );
+    // Vérifie le compte sur le serveur avant de créer le salon.
+    const ok = await refreshSavedAccount(currentUser.pseudo);
+    if (!ok || !currentUser?.pseudo) return;
+
+    socket.emit("createRoom", { pseudo: currentUser.pseudo });
   }
 );
 
@@ -2124,6 +2131,7 @@ window.addEventListener(
       }
 
       loginUser(user);
+      refreshSavedAccount(user.pseudo);
 
     } catch (error) {
       console.error(error);
