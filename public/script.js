@@ -1371,39 +1371,68 @@ $("searchFriendButton")
           <div class="friend-card">
 
             <strong>
-              ${user.icon || "🐺"}
-              ${user.pseudo}
+              ${esc(user.icon || "🐺")}
+              ${esc(user.pseudo)}
             </strong>
 
             <p>
-              ${
-                user.title ||
-                "Nouveau Villageois"
-              }
+              ${esc(user.title || "Nouveau Villageois")}
             </p>
 
             <p>
-              ⭐ Niveau
-              ${user.level || 1}
-
-              • ✨
-              ${user.xp || 0} XP
-
-              • 🪙
-              ${user.coins || 0}
+              ⭐ Niveau ${user.level || 1}
+              • ✨ ${user.xp || 0} XP
+              • 🪙 ${user.coins || 0}
             </p>
 
             <p>
               🐺 Classe :
-              ${
-                equippedClass
-                  ? equippedClass.name
-                  : "Aucune"
-              }
+              ${esc(equippedClass ? equippedClass.name : "Aucune")}
             </p>
+
+            <button
+              id="addFriendButton"
+              type="button"
+              class="main-button"
+            >
+              👥 Ajouter en amis
+            </button>
+
+            <p id="friendRequestStatus" class="muted"></p>
 
           </div>
         `;
+
+        const addFriendButton = $("addFriendButton");
+        const friendRequestStatus = $("friendRequestStatus");
+        addFriendButton?.addEventListener("click", async () => {
+          if (!currentUser) {
+            alert("❌ Tu dois être connecté.");
+            return;
+          }
+          if (normalizeClient(currentUser.pseudo) === normalizeClient(user.pseudo)) {
+            if (friendRequestStatus) friendRequestStatus.textContent = "❌ Tu ne peux pas t'ajouter toi-même.";
+            return;
+          }
+          addFriendButton.disabled = true;
+          addFriendButton.textContent = "⏳ Envoi...";
+          try {
+            const data = await apiJson("/api/friends/request", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                fromPseudo: currentUser.pseudo,
+                toPseudo: user.pseudo
+              })
+            });
+            if (friendRequestStatus) friendRequestStatus.textContent = "✅ " + (data.message || "Demande d'ami envoyée !");
+            addFriendButton.textContent = "✅ Demande envoyée";
+          } catch (e) {
+            if (friendRequestStatus) friendRequestStatus.textContent = "❌ " + e.message;
+            addFriendButton.disabled = false;
+            addFriendButton.textContent = "👥 Ajouter en amis";
+          }
+        });
 
       } catch {
         result.textContent =
@@ -1605,6 +1634,8 @@ $("adminSearchButton")
     }
   );
 
+
+$("adminPlayerSearch")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("adminSearchButton")?.click();}});
 
 /* =====================================
    ADMIN - TYPE DE RÉCOMPENSE
@@ -2226,7 +2257,14 @@ socket.on("roomInviteResult",()=>loadNotificationsV8());
 
 /* ADMIN */
 async function loadAdminV8(){
- if(!isAdmin())return;try{const d=await apiJson(`/api/admin/bootstrap?adminPseudo=${encodeURIComponent(currentUser.pseudo)}`);const uc=$("adminUsersList"),cc=$("adminClassesList"),sel=$("adminClassSelect"),selAll=$("adminAllClassSelect");
+ if(!isAdmin())return;
+ try{
+  const d=await apiJson(`/api/admin/bootstrap?adminPseudo=${encodeURIComponent(currentUser.pseudo)}`);
+  const uc=$("adminUsersList"),cc=$("adminClassesList"),sel=$("adminClassSelect"),selAll=$("adminAllClassSelect");
+  const stats=$("adminDashboardStats");
+  if(stats){const users=d.users||[];const online=users.filter(u=>u.online).length;const coins=users.reduce((n,u)=>n+Number(u.coins||0),0);const xp=users.reduce((n,u)=>n+Number(u.xp||0),0);stats.innerHTML=`<div class="admin-stat"><b>👥</b><strong>${users.length}</strong><span>comptes</span></div><div class="admin-stat"><b>🟢</b><strong>${online}</strong><span>en ligne</span></div><div class="admin-stat"><b>🪙</b><strong>${coins}</strong><span>pièces</span></div><div class="admin-stat"><b>✨</b><strong>${xp}</strong><span>XP totale</span></div>`;}
+  const announcementInput=$("announcementInput");
+  if(announcementInput)announcementInput.value=d.announcement?.text||"";
   if(sel)sel.innerHTML=`<option value="">Choisir une classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");if(selAll)selAll.innerHTML=`<option value="">Aucune classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");
   if(cc)cc.innerHTML=`<h4>🐺 Classes</h4>`+d.classes.map(x=>`<div class="admin-class-row"><b>${esc(x.name)}</b><span>${x.price} 🪙 • ${x.chance}%</span></div>`).join("");
   renderAdminBoostsV16(d.globalBoosts);
@@ -2288,9 +2326,7 @@ socket.on("voteError",data=>{alert("🗳️ "+(data?.message||"Vote refusé."));
 $("adminRewardAllButton")?.addEventListener("click",async()=>{if(!isAdmin())return;try{const d=await apiJson("/api/admin/reward-all-now",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminPseudo:currentUser.pseudo,coins:Number($("adminAllCoins")?.value||0),xp:Number($("adminAllXp")?.value||0),trophies:Number($("adminAllTrophies")?.value||0),classId:$("adminAllClassSelect")?.value||"",onlineOnly:Boolean($("adminOnlineOnly")?.checked)})});$("adminAllMessage").textContent="✅ "+d.message;loadAdminV8();}catch(e){$("adminAllMessage").textContent="❌ "+e.message;}});
 
 /* Récompense individuelle : trophées */
-const oldAdminGive=window._adminGiveV8;
-$("adminGiveButton")?.addEventListener("click",()=>{});
-// Le listener historique est conservé ; le serveur accepte désormais les récompenses en attente.
+// Le bouton de récompense individuelle est géré par le listener principal ci-dessus.
 
 /* CHAT */
 $("chatEnabledToggle")?.addEventListener("change",async()=>{try{const d=await apiJson("/api/settings/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,chatEnabled:$ ("chatEnabledToggle").checked})});currentUser=d.user;saveCurrentUser();}catch(e){alert("❌ "+e.message);}});
