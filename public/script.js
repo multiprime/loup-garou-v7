@@ -2315,8 +2315,6 @@ socket.on("gameFinished",d=>{document.body.classList.remove("in-game");myGameRol
 socket.on("gameChatMessage",m=>{const c=$("gameChatMessages");if(!c)return;const el=document.createElement("div");el.className="game-chat-line";el.innerHTML=`<b>${esc(m.pseudo)} :</b> ${esc(m.text)}`;c.appendChild(el);c.scrollTop=c.scrollHeight;});
 socket.on("seerResult",d=>alert(`🔮 ${d.target} est ${d.role}.`));
 socket.on("roleActionResult",d=>alert("🌙 "+d.message));
-socket.on("hunterActionRequired",d=>renderHunterChoicesV8(d));
-socket.on("hunterShot",d=>alert(`🏹 ${d.hunter} a éliminé ${d.target}.`));
 function renderGamePhaseV8(phase,data){
   const c=$("roomsList"); if(!c||!currentUser)return;
   const allPlayers=Array.isArray(data.players)?data.players:[];
@@ -2462,7 +2460,7 @@ socket.on("globalBoostUpdated",d=>{
 socket.on("nightStepTimer",d=>{
   const box=$("gameTimer"); if(!box)return; const end=Date.now()+Number(d.duration||0);
   clearInterval(window.gameTimerInterval);
-  const labels={cupid:"Cupidon joue",wolves:"Les Loups-Garous votent",seer:"La Voyante agit",witch:"La Sorcière agit"};
+  const labels={cupid:"💘 Tour de Cupidon — choisis 2 amoureux",wolves:"🐺 Tour des Loups-Garous — votez ensemble",seer:"🔮 Tour de la Voyante — découvre un rôle",witch:"🧪 Tour de la Sorcière — potions"};
   const tick=()=>{const left=Math.max(0,end-Date.now());box.textContent=`${labels[d.step]||"Tour de nuit"} • ${Math.ceil(left/1000)}s`;if(!left)clearInterval(window.gameTimerInterval);};
   tick();window.gameTimerInterval=setInterval(tick,250);
 });
@@ -2484,7 +2482,7 @@ function renderGamePhaseV19(phase,data){
   const canWitch=isNightRole("Sorcière")&&step==="witch";
   const targets=alive.filter(p=>p.pseudo!==currentUser.pseudo && (canWolf ? p.role!=="Loup-Garou" : true));
   c.innerHTML=`<div class="game-screen v19-game">
-    <div class="game-header"><div><span class="game-phase-badge ${phase}">${phase==="night"?"🌙 NUIT":"☀️ JOUR"}</span><h2>${phase==="night"?"Tout le village dort…":"☀️ Le village se réunit"}</h2><p class="game-subtitle">Jour ${data.day||1} • ${alive.length}/${all.length} joueurs vivants</p></div><div id="gameTimer" class="game-v19-timer">${phase==="day"?"Discussion ouverte":"La nuit commence"}</div></div>
+    <div class="game-header"><div><span class="game-phase-badge ${phase}">${phase==="night"?"🌙 NUIT":"☀️ JOUR"}</span><h2>${phase==="night"?"Tout le village dort…":"☀️ Le village se réunit"}</h2><p class="game-subtitle">Jour ${data.day||1} • ${alive.length}/${all.length} vivants • chaque rôle joue à son tour</p></div><div id="gameTimer" class="game-v19-timer">${phase==="day"?"Discussion ouverte":"La nuit commence"}</div></div>
     <div class="game-role-card featured"><div class="role-label">TON RÔLE — SECRET</div><div class="my-role">🎭 ${esc(myGameRole||"Chargement...")}</div><small>Ton rôle est visible uniquement sur ton écran.</small></div>
     <div class="game-instruction">${canCupid?"💘 C’EST TON TOUR — Cupidon choisit deux amoureux. Tu n’agis qu’une seule fois, pendant la première nuit.":canWolf?"🐺 C’EST LE TOUR DES LOUPS — discutez entre vous puis votez pour une victime. Les villageois ne voient rien.":canSeer?"🔮 C’EST TON TOUR — la Voyante choisit un joueur et découvre secrètement son rôle.":canWitch?"🧪 C’EST TON TOUR — la Sorcière voit la victime des Loups et peut utiliser sa potion de vie ou de mort.":phase==="night"?"🌙 TU ATTENDS — un autre rôle joue actuellement. Ton écran reste calme jusqu’à ton tour.":"☀️ C’EST LE TOUR DU VILLAGE — discute, observe les votes puis choisis un joueur à éliminer."}</div>
     ${canCupid?'<div class="cupid-choice"><strong>1er choix :</strong><span id="cupidFirst">Aucun</span><strong>2e choix :</strong><span id="cupidSecond">Aucun</span></div>':''}
