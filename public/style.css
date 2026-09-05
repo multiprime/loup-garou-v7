@@ -1186,3 +1186,11 @@ body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circl
 .game-chat-compose{display:flex;gap:8px;margin-top:10px}.game-chat-compose input{flex:1;min-width:0}
 .shop-buy:disabled{opacity:.45;cursor:not-allowed}
 @media(max-width:700px){.game-chat-compose{flex-direction:column}}
+
+/* V16 — panneau des multiplicateurs admin */
+.admin-boost-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:14px}
+.admin-boost-grid>div{padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.025)}
+.admin-boost-buttons{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.admin-boost-buttons button{min-width:48px}
+.admin-boost-card small{opacity:.75}
+@media(max-width:900px){.admin-boost-grid{grid-template-columns:1fr}}
