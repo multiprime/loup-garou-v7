@@ -571,9 +571,6 @@ function getClassEmoji(classId = "") {
     return "🧪";
   }
 
-  if (classId.startsWith("hunter")) {
-    return "🎯";
-  }
 
   if (classId.startsWith("premium")) {
     return "💎";
@@ -2313,10 +2310,8 @@ async function loadBloodMoonV8(){const c=$("bloodMoonContent");if(!c||!currentUs
 
 /* Socket gameplay */
 socket.on("yourRole",d=>{myGameRole=d.role||null;myGameClassChance=d.classChance||0;myGameTeammates=Array.isArray(d.teammates)?d.teammates:[];if(currentUser){currentUser.gameRole=myGameRole;updateProfile();}const el=$("playerGameRole");if(el){el.textContent=`🎭 Rôle : ${myGameRole}`;el.classList.remove("hidden");}});
-socket.on("nightStarted",d=>renderGamePhaseV8("night",d));
-socket.on("dayStarted",d=>renderGamePhaseV8("day",d));
 socket.on("voteUpdate",d=>{const el=$("selectedVote");if(el&&d.voter===currentUser?.pseudo)el.textContent=`Vote envoyé contre ${d.target}`;const counter=document.querySelector(".game-vote-counter");if(counter&&d.required)counter.textContent=`🗳️ ${d.count}/${d.required} votes`;});
-socket.on("gameFinished",d=>{myGameRole=null;myGameClassChance=0;myGameTeammates=[];if(currentUser){currentUser.gameRole=null;saveCurrentUser();updateProfile();}document.body.dataset.lgPhase="salon";const c=$("roomsList");if(c)c.innerHTML=`<div class="room-card game-result"><h2>🏁 Partie terminée</h2><h3>Victoire : ${esc(d.winner)}</h3><p>Retourne au menu ou recrée un salon.</p></div>`;loadNotificationsV8();});
+socket.on("gameFinished",d=>{document.body.classList.remove("in-game");myGameRole=null;myGameClassChance=0;myGameTeammates=[];if(currentUser){currentUser.gameRole=null;saveCurrentUser();updateProfile();}document.body.dataset.lgPhase="salon";const c=$("roomsList");if(c)c.innerHTML=`<div class="room-card game-result"><h2>🏁 Partie terminée</h2><h3>Victoire : ${esc(d.winner)}</h3><p>Retourne au menu ou recrée un salon.</p></div>`;loadNotificationsV8();});
 socket.on("gameChatMessage",m=>{const c=$("gameChatMessages");if(!c)return;const el=document.createElement("div");el.className="game-chat-line";el.innerHTML=`<b>${esc(m.pseudo)} :</b> ${esc(m.text)}`;c.appendChild(el);c.scrollTop=c.scrollHeight;});
 socket.on("seerResult",d=>alert(`🔮 ${d.target} est ${d.role}.`));
 socket.on("roleActionResult",d=>alert("🌙 "+d.message));
@@ -2445,3 +2440,79 @@ const _renderNotificationV8=renderNotification;
 renderNotification=function(n){const el=_renderNotificationV8(n);if(n.type==="friendRequest"&&n.action){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=async()=>{try{await apiJson("/api/friends/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,requestId:n.action.requestId,accept:ok})});b.parentElement?.remove();loadFriendsV8();}catch(e){alert("❌ "+e.message);}};el.appendChild(b);});}
 if(n.type==="chatRequest"&&n.requestId){[true,false].forEach(ok=>{const b=document.createElement("button");b.className=ok?"main-button":"secondary-button";b.textContent=ok?"Accepter":"Refuser";b.onclick=async()=>{try{await apiJson("/api/chat/respond",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({pseudo:currentUser.pseudo,requestId:n.requestId,accept:ok})});loadNotificationsV8();}catch(e){alert("❌ "+e.message);}};el.appendChild(b);});}
 return el;};
+
+
+/* V19 — boosts publics + partie plus lente et séquencée */
+function renderGlobalBoostsV19(payload){
+  const box=$("globalBoostBanner"); if(!box)return;
+  const boosts=payload?.boosts||payload||{}; const now=Date.now(); const names={coins:"🪙 Pièces",xp:"✨ XP",trophies:"🏆 Trophées"};
+  const active=Object.entries(names).map(([type,label])=>{
+    const b=boosts[type]||{}; const left=Number(b.until||0)-now; const mult=Number(b.multiplier||1);
+    return left>0&&mult>1?`${label} x${mult} — ${Math.ceil(left/60000)} min pour TOUS`:null;
+  }).filter(Boolean);
+  box.innerHTML=active.length?`<strong>⚡ BOOST POUR TOUT LE MONDE</strong><div>${active.join(" • ")}</div>`:"";
+  box.classList.toggle("hidden",!active.length);
+}
+
+socket.on("globalBoostUpdated",d=>{
+  renderGlobalBoostsV19(d?.boosts||d?.globalBoosts||{});
+  if(d?.boost) updateProfile();
+});
+
+socket.on("nightStepTimer",d=>{
+  const box=$("gameTimer"); if(!box)return; const end=Date.now()+Number(d.duration||0);
+  clearInterval(window.gameTimerInterval);
+  const labels={cupid:"Cupidon joue",wolves:"Les Loups-Garous votent",seer:"La Voyante agit",witch:"La Sorcière agit"};
+  const tick=()=>{const left=Math.max(0,end-Date.now());box.textContent=`${labels[d.step]||"Tour de nuit"} • ${Math.ceil(left/1000)}s`;if(!left)clearInterval(window.gameTimerInterval);};
+  tick();window.gameTimerInterval=setInterval(tick,250);
+});
+
+socket.on("witchTurn",d=>{window.witchVictim=d.victim||null; if($('witchVictimInfo'))$('witchVictimInfo').textContent=d.victim?`La cible des Loups : ${d.victim}`:"Aucune victime";});
+socket.on("dayVoteResult",d=>{if(d?.target)alert(`🗳️ Résultat du vote : ${d.target} est éliminé.`);});
+socket.on("nightResolved",d=>{if(d?.victim)console.log("Nuit :",d.victim);});
+
+function renderGamePhaseV19(phase,data){
+  const c=$("roomsList"); if(!c||!currentUser)return;
+  document.body.classList.add("in-game");
+  const all=Array.isArray(data.players)?data.players:[]; const alive=all.filter(p=>p.alive); const step=data.nightStep;
+  let selected=[]; let voted=false;
+  const isNightRole=(r)=>phase==="night"&&myGameRole===r;
+  const canDayVote=phase==="day";
+  const canWolf=phase==="night"&&step==="wolves"&&myGameRole==="Loup-Garou";
+  const canCupid=isNightRole("Cupidon")&&step==="cupid";
+  const canSeer=isNightRole("Voyante")&&step==="seer";
+  const canWitch=isNightRole("Sorcière")&&step==="witch";
+  const targets=alive.filter(p=>p.pseudo!==currentUser.pseudo && (canWolf ? p.role!=="Loup-Garou" : true));
+  c.innerHTML=`<div class="game-screen v19-game">
+    <div class="game-header"><div><span class="game-phase-badge ${phase}">${phase==="night"?"🌙 NUIT":"☀️ JOUR"}</span><h2>${phase==="night"?"Tout le village dort…":"☀️ Le village se réunit"}</h2><p class="game-subtitle">Jour ${data.day||1} • ${alive.length}/${all.length} joueurs vivants</p></div><div id="gameTimer" class="game-v19-timer">${phase==="day"?"Discussion ouverte":"La nuit commence"}</div></div>
+    <div class="game-role-card featured"><div class="role-label">TON RÔLE — SECRET</div><div class="my-role">🎭 ${esc(myGameRole||"Chargement...")}</div><small>Ton rôle est visible uniquement sur ton écran.</small></div>
+    <div class="game-instruction">${canCupid?"💘 C’EST TON TOUR — Cupidon choisit deux amoureux. Tu n’agis qu’une seule fois, pendant la première nuit.":canWolf?"🐺 C’EST LE TOUR DES LOUPS — discutez entre vous puis votez pour une victime. Les villageois ne voient rien.":canSeer?"🔮 C’EST TON TOUR — la Voyante choisit un joueur et découvre secrètement son rôle.":canWitch?"🧪 C’EST TON TOUR — la Sorcière voit la victime des Loups et peut utiliser sa potion de vie ou de mort.":phase==="night"?"🌙 TU ATTENDS — un autre rôle joue actuellement. Ton écran reste calme jusqu’à ton tour.":"☀️ C’EST LE TOUR DU VILLAGE — discute, observe les votes puis choisis un joueur à éliminer."}</div>
+    ${canCupid?'<div class="cupid-choice"><strong>1er choix :</strong><span id="cupidFirst">Aucun</span><strong>2e choix :</strong><span id="cupidSecond">Aucun</span></div>':''}
+    ${canWitch?'<div class="witch-victim-box">🧪 <span id="witchVictimInfo">La Sorcière reçoit la cible des Loups...</span></div>':''}
+    <div class="game-night-order"><span class="active">1. Cupidon</span><span>2. Loups</span><span>3. Voyante</span><span>4. Sorcière</span><span>5. Village</span></div>
+    <div class="game-players-grid" id="gameTargets"></div>
+    <div class="game-action-panel" id="gameActions"></div>
+    <div class="game-chat-panel"><div class="game-chat-head"><strong>💬 Discussion du village</strong><span>${phase==="day"?"Active":"Fermée pendant la nuit"}</span></div><div id="gameChatMessages" class="game-chat-messages"></div><div class="game-chat-compose"><input id="gameChatInput" maxlength="300" placeholder="Message respectueux…" ${phase!=="day"?"disabled":""}><button id="gameChatSend" class="main-button" ${phase!=="day"?"disabled":""}>Envoyer</button></div></div>
+  </div>`;
+  const t=$("gameTargets"),a=$("gameActions");
+  (data.chat||[]).slice(-50).forEach(m=>{const el=document.createElement("div");el.className="game-chat-line";el.innerHTML=`<b>${esc(m.pseudo)} :</b> ${esc(m.text)}`;$("gameChatMessages")?.appendChild(el);});
+  if($("gameChatMessages"))$("gameChatMessages").scrollTop=$("gameChatMessages").scrollHeight;
+  const send=()=>{const input=$("gameChatInput");const text=input?.value.trim();if(!text)return;socket.emit("gameChat",{code:currentRoomCode,pseudo:currentUser.pseudo,text});input.value="";};
+  $("gameChatSend")?.addEventListener("click",send);$("gameChatInput")?.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();send();}});
+  targets.forEach(p=>{const b=document.createElement("button");b.type="button";b.className="game-player-card";b.innerHTML=`<span class="player-avatar">${p.isBot?"🤖":"👤"}</span><span class="player-name">${esc(p.pseudo)}</span><span class="player-status">${p.isBot?"BOT":"JOUEUR"}</span>`;b.onclick=()=>{if(selected.includes(p.pseudo))return;if(canCupid&&selected.length<2){selected.push(p.pseudo);b.classList.add("selected");$(selected.length===1?"cupidFirst":"cupidSecond").textContent=p.pseudo;if(selected.length===2)$("cupidConfirm")?.removeAttribute("disabled");return;}selected=[p.pseudo];t.querySelectorAll("button").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");$("voteConfirm")?.removeAttribute("disabled");$("seerBtn")?.removeAttribute("disabled");$("witchSave")?.removeAttribute("disabled");$("witchKill")?.removeAttribute("disabled");};t.appendChild(b);});
+  if(canCupid)a.innerHTML='<div class="vote-panel"><strong>💘 Choix de Cupidon</strong><button id="cupidConfirm" class="main-button" disabled>💘 Désigner les deux joueurs</button></div>';
+  if(canWolf||canDayVote)a.innerHTML='<div class="vote-panel"><strong>🗳️ Vote</strong><span>Un seul vote par phase.</span><button id="voteConfirm" class="main-button" disabled>🗳️ Choisir une cible</button></div>';
+  if(canSeer)a.innerHTML='<div class="vote-panel"><strong>🔮 Voyante</strong><button id="seerBtn" class="main-button" disabled>🔮 Découvrir le rôle</button></div>';
+  if(canWitch)a.innerHTML='<div class="vote-panel"><strong>🧪 Sorcière</strong><div class="game-actions"><button id="witchSave" class="main-button" disabled>🛡️ Sauver la cible</button><button id="witchKill" class="secondary-button" disabled>☠️ Potion de mort</button><button id="witchPass" class="secondary-button">Passer</button></div></div>';
+  $("cupidConfirm")?.addEventListener("click",()=>{if(selected.length===2){socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,action:"cupid",targetPseudo:selected[0],secondTargetPseudo:selected[1]});$("cupidConfirm").disabled=true;}});
+  $("voteConfirm")?.addEventListener("click",()=>{if(!selected[0]||voted)return;voted=true;socket.emit(canDayVote?"dayVote":"nightVote",{code:currentRoomCode,pseudo:currentUser.pseudo,targetPseudo:selected[0]});$("voteConfirm").disabled=true;$("voteConfirm").textContent="✅ Vote envoyé";t.querySelectorAll("button").forEach(x=>x.disabled=true);});
+  $("seerBtn")?.addEventListener("click",()=>{if(!selected[0])return;socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,action:"inspect",targetPseudo:selected[0]});$("seerBtn").disabled=true;});
+  $("witchSave")?.addEventListener("click",()=>{if(window.witchVictim){socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,action:"save",targetPseudo:window.witchVictim});$("witchSave").disabled=true;$("witchKill").disabled=true;}});
+  $("witchKill")?.addEventListener("click",()=>{if(!selected[0])return;socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,action:"kill",targetPseudo:selected[0]});$("witchSave").disabled=true;$("witchKill").disabled=true;});
+  $("witchPass")?.addEventListener("click",()=>socket.emit("roleAction",{code:currentRoomCode,pseudo:currentUser.pseudo,action:"pass"}));
+}
+
+socket.on("nightStarted",d=>renderGamePhaseV19("night",d));
+socket.on("nightStepStarted",d=>renderGamePhaseV19("night",d));
+socket.on("dayStarted",d=>renderGamePhaseV19("day",d));
+socket.on("voteUpdate",d=>{const x=$("gameTimer");if(x&&d?.required)x.textContent=`🗳️ ${d.count}/${d.required} votes enregistrés`;});
