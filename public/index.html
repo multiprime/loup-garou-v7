@@ -800,6 +800,47 @@
         <p id="adminAllMessage"></p>
       </div>
 
+      <div class="admin-card admin-boost-card">
+        <h3>⚡ Multiplicateurs globaux</h3>
+        <p>Active un bonus pour tous les joueurs. Durée par défaut : 10 minutes.</p>
+        <div class="admin-boost-grid">
+          <div>
+            <strong>🪙 Pièces</strong>
+            <div class="admin-boost-buttons" data-boost-type="coins">
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="2">x2</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="4">x4</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="5">x5</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="10">x10</button>
+              <button type="button" class="danger-button admin-boost-btn" data-mult="1">OFF</button>
+            </div>
+            <small id="adminBoostCoinsStatus">Aucun bonus</small>
+          </div>
+          <div>
+            <strong>✨ XP</strong>
+            <div class="admin-boost-buttons" data-boost-type="xp">
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="2">x2</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="4">x4</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="5">x5</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="10">x10</button>
+              <button type="button" class="danger-button admin-boost-btn" data-mult="1">OFF</button>
+            </div>
+            <small id="adminBoostXpStatus">Aucun bonus</small>
+          </div>
+          <div>
+            <strong>🏆 Trophées</strong>
+            <div class="admin-boost-buttons" data-boost-type="trophies">
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="2">x2</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="4">x4</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="5">x5</button>
+              <button type="button" class="secondary-button admin-boost-btn" data-mult="10">x10</button>
+              <button type="button" class="danger-button admin-boost-btn" data-mult="1">OFF</button>
+            </div>
+            <small id="adminBoostTrophiesStatus">Aucun bonus</small>
+          </div>
+        </div>
+        <p id="adminBoostMessage"></p>
+      </div>
+
       <div class="admin-card">
         <h3>🌕 Événement Lune de Sang</h3>
         <p>Lance immédiatement l'événement pour 20 minutes.</p>
