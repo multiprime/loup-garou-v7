@@ -31,7 +31,15 @@ const ADMIN_PSEUDO =
 // Render Free n'autorise pas l'écriture dans /data sans disque persistant.
 // Par défaut, on utilise le dossier de l'application pour que le serveur démarre.
 // Pour un stockage persistant plus tard : DATA_DIR=/var/data.
-const DATA_DIR = process.env.DATA_DIR || __dirname;
+let DATA_DIR = process.env.DATA_DIR || "";
+if (!DATA_DIR) {
+  // Render/production : si un dossier persistant est monté, on le préfère.
+  // Sinon on retombe sur le dossier de l'application pour rester compatible.
+  const persistentCandidates = ["/var/data", "/data"];
+  DATA_DIR = persistentCandidates.find(dir => {
+    try { fs.mkdirSync(dir, { recursive: true }); fs.accessSync(dir, fs.constants.W_OK); return true; } catch (_) { return false; }
+  }) || __dirname;
+}
 fs.mkdirSync(DATA_DIR, { recursive: true });
 const DATA_FILE = path.join(DATA_DIR, "data.json");
 
@@ -258,10 +266,10 @@ const CLASSES = [
   },
 
   {
-    id: "hunter1",
-    name: "Chasseur",
-    price: 1000,
-    chance: 35
+    id: "cupid1",
+    name: "Cupidon",
+    price: 900,
+    chance: 30
   },
 
   {
@@ -875,56 +883,55 @@ function classCanGrantRole(classId, role) {
     wolf2: ["Loup-Garou"],
     seer1: ["Voyante"],
     witch1: ["Sorcière"],
-    hunter1: ["Chasseur"]
+    cupid1: ["Cupidon"]
   };
 
   return Boolean(exact[classId]?.includes(role));
 }
 
-function choosePlayerForRole(players, role, used) {
-  const candidates = players.filter((player) => !used.has(player.pseudo));
+function roleLotteryWeight(player, role) {
+  // Les rôles spéciaux sont réellement liés aux classes possédées.
+  // Une classe compatible augmente fortement la probabilité, sans jamais
+  // révéler à la table qui possède quelle classe.
+  const classe = getEquippedClass(player);
+  if (!classe) return player.isBot ? 8 : 1;
+  const chance = Math.max(1, Math.min(100, Number(classe.chance || 1)));
+  if (classCanGrantRole(classe.id, role)) return chance;
+  return 1;
+}
+
+function weightedPick(players, role, used) {
+  const candidates = players.filter(p => !used.has(p.pseudo));
   if (!candidates.length) return null;
-
-  // La chance de la classe est une vraie probabilité serveur.
-  // Une classe correspondant au rôle reçoit en plus une préférence forte.
-  const eligible = candidates.filter((player) => {
-    const classe = getEquippedClass(player) || { chance: 0 };
-    const chance = Math.max(0, Math.min(100, Number(classe.chance || 0)));
-    return Math.random() * 100 < chance;
-  });
-
-  const pool = eligible.length ? eligible : candidates;
-  const preferred = pool.filter((player) => {
-    const classe = getEquippedClass(player);
-    return classe && classCanGrantRole(classe.id, role);
-  });
-
-  const finalPool = preferred.length ? preferred : pool;
-  return finalPool[Math.floor(Math.random() * finalPool.length)];
+  const weights = candidates.map(p => roleLotteryWeight(p, role));
+  const total = weights.reduce((a,b)=>a+b,0);
+  let roll = Math.random() * total;
+  for (let i=0;i<candidates.length;i++) {
+    roll -= weights[i];
+    if (roll <= 0) return candidates[i];
+  }
+  return candidates[candidates.length-1];
 }
 
 function createGame(room) {
   const players = shuffle(room.players);
-  const roles = [
-    "Loup-Garou",
-    "Loup-Garou",
-    "Voyante",
-    "Sorcière"
-  ];
+  // Configuration classique pour 8 joueurs : 2 Loups, 1 Voyante,
+  // 1 Sorcière, 1 Cupidon et 3 Villageois. Le paquet est mélangé avant
+  // l'attribution : aucun ordre de joueur ne favorise un rôle.
+  const roles = shuffle([
+    "Loup-Garou", "Loup-Garou", "Voyante", "Sorcière", "Cupidon",
+    "Villageois", "Villageois", "Villageois"
+  ]);
 
   const assignments = new Map();
   const used = new Set();
-
-  // On attribue d'abord les rôles spéciaux.
-  roles.forEach((role) => {
-    const player = choosePlayerForRole(players, role, used);
-    if (player) {
-      assignments.set(player.pseudo, role);
-      used.add(player.pseudo);
-    }
+  roles.forEach(role => {
+    if (role === "Villageois") return;
+    const player = weightedPick(players, role, used);
+    if (player) { assignments.set(player.pseudo, role); used.add(player.pseudo); }
   });
 
-  const gamePlayers = players.map((player) => ({
+  const gamePlayers = players.map(player => ({
     pseudo: player.pseudo,
     isBot: Boolean(player.isBot),
     alive: true,
@@ -933,33 +940,12 @@ function createGame(room) {
   }));
 
   return {
-    id: createId(),
-
-    roomCode:
-      room.code,
-
-    ranked:
-      Boolean(
-        room.ranked
-      ),
-
-    phase: "night",
-
-    day: 1,
-
-    chat: [],
-
-    players:
-      gamePlayers,
-
-    nightVotes: {},
-
-    dayVotes: {},
-
-    winner: null,
-
-    createdAt:
-      Date.now()
+    id: createId(), roomCode: room.code, ranked: Boolean(room.ranked), phase: "night",
+    nightStep: "cupid", day: 1, chat: [], players: gamePlayers,
+    nightVotes: {}, dayVotes: {}, nightTargetPseudo: null,
+    nightActions: { saved: null, witchKill: null },
+    witchSaveUsed: false, witchKillUsed: false, cupidUsed: false,
+    linkedPlayers: [], seerUsedThisNight: false, winner: null, createdAt: Date.now()
   };
 }
 
@@ -2715,6 +2701,7 @@ function launchRoomGame(room) {
   if(room.startingAt && Date.now()-room.startingAt<9000)return false;
   room.startingAt=null;
   addBotsToRoom(room);
+  if (room.players.length < 8) return false;
   room.status = "playing";
   room.game = createGame(room);
   saveDatabase();
@@ -2726,33 +2713,226 @@ function launchRoomGame(room) {
 function randomAliveTarget(game, filterFn) {
   const list=getAlivePlayers(game).filter(filterFn||(()=>true)); return list.length?list[Math.floor(Math.random()*list.length)]:null;
 }
-function emitPublicGameState(room,event="gameState"){
+const GAME_TIMERS = {
+  cupid: 45000,
+  wolves: 60000,
+  seer: 45000,
+  witch: 45000,
+  day: 90000
+};
+
+function aliveRole(game, role) {
+  return game.players.find(p => p.alive && p.role === role) || null;
+}
+
+function applyLinkedDeaths(game) {
+  const queue = game.players.filter(p => !p.alive && game.linkedPlayers.includes(p.pseudo));
+  const killed = [];
+  while (queue.length) {
+    const dead = queue.shift();
+    const linked = game.linkedPlayers.find(x => x !== dead.pseudo && game.linkedPlayers.includes(x));
+    if (!linked) continue;
+    const other = game.players.find(p => p.pseudo === linked);
+    if (other && other.alive) {
+      other.alive = false;
+      killed.push(other.pseudo);
+      queue.push(other);
+    }
+  }
+  return killed;
+}
+
+function emitPublicGameState(room,event="gameState") {
   const g=room.game;if(!g)return;
-  const voters=g.phase==="night"?g.players.filter(p=>p.alive&&p.role==="Loup-Garou"):g.players.filter(p=>p.alive);
-  const votes=g.phase==="night"?g.nightVotes||{}:g.dayVotes||{};
-  io.to(room.code).emit(event,{phase:g.phase,day:g.day,winner:g.winner,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),ranked:g.ranked,voteCount:Object.keys(votes).length,requiredVotes:voters.length,chat:(g.chat||[]).slice(-50),nightActionsAvailable:{wolvesVote:g.phase==="night",seer:g.phase==="night",witch:g.phase==="night"}});
+  const voters=g.phase==="night" && g.nightStep==="wolves"
+    ?g.players.filter(p=>p.alive&&p.role==="Loup-Garou")
+    :g.phase==="day"?g.players.filter(p=>p.alive):[];
+  const votes=g.phase==="night"?(g.nightVotes||{}):(g.dayVotes||{});
+  io.to(room.code).emit(event,{
+    phase:g.phase, day:g.day, winner:g.winner, nightStep:g.nightStep||null,
+    players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot})),
+    ranked:g.ranked, voteCount:Object.keys(votes).length, requiredVotes:voters.length,
+    chat:(g.chat||[]).slice(-50),
+    nightActionsAvailable:{wolvesVote:g.phase==="night"&&g.nightStep==="wolves",seer:g.phase==="night"&&g.nightStep==="seer",witch:g.phase==="night"&&g.nightStep==="witch",cupid:g.phase==="night"&&g.nightStep==="cupid"}
+  });
 }
-function startNightPhase(room){const g=room.game;if(!g||g.phase==="finished")return;g.phase="night";g.nightVotes={};g.nightActions=g.nightActions||{saved:null,witchKill:null,witchUsed:false};emitPublicGameState(room,"nightStarted");
-  const wolves=g.players.filter(p=>p.alive&&p.role==="Loup-Garou"); wolves.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{if(room.game?.phase!=="night")return;const target=randomAliveTarget(g,p=>p.role!=="Loup-Garou");if(target)g.nightVotes[bot.pseudo]=target.pseudo;tryResolveNight(room);},800+i*350));
-  setTimeout(()=>{if(room.game?.phase==="night"){wolves.forEach(w=>{if(!g.nightVotes[w.pseudo]){const t=randomAliveTarget(g,p=>p.role!=="Loup-Garou");if(t)g.nightVotes[w.pseudo]=t.pseudo;}});tryResolveNight(room);}},15000);
+
+function startNightPhase(room){
+  const g=room.game;if(!g||g.phase==="finished")return;
+  g.phase="night";
+  g.nightVotes={};
+  g.nightTargetPseudo=null;
+  g.nightActions={saved:null,witchKill:null};
+  g.seerUsedThisNight=false;
+  const cupid=aliveRole(g,"Cupidon");
+  g.nightStep=(g.day===1 && cupid && !g.cupidUsed)?"cupid":"wolves";
+  startNightStep(room,g.nightStep);
 }
-function tryResolveNight(room){const g=room.game;if(!g||g.phase!=="night")return;const wolves=g.players.filter(p=>p.alive&&p.role==="Loup-Garou");if(wolves.some(w=>!g.nightVotes[w.pseudo]))return;const counts={};Object.values(g.nightVotes).forEach(t=>counts[t]=(counts[t]||0)+1);const victimPseudo=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];let victim=g.players.find(p=>p.pseudo===victimPseudo);
-  if(g.nightActions?.saved===victimPseudo)victim=null; else if(victim)victim.alive=false;
-  const witchKill=g.nightActions?.witchKill;if(witchKill){const v=g.players.find(p=>p.pseudo===witchKill&&p.alive);if(v)v.alive=false;}
-  g.nightVotes={};g.nightActions={saved:null,witchKill:null,witchUsed:Boolean(g.nightActions?.witchUsed)};
-  if(victim && victim.role==="Chasseur")return hunterDeathFlow(room,victim,()=>{if(!checkGameWinner(g)){g.phase="day";startDayPhase(room,victim.pseudo);}});
-  if(checkGameWinner(g)){finishGame(room);return;}g.phase="day";startDayPhase(room,victim?victim.pseudo:null);
+
+function startNightStep(room,step){
+  const g=room.game;if(!g||g.phase!=="night")return;
+  g.nightStep=step;
+  emitPublicGameState(room,"nightStepStarted");
+  const duration=GAME_TIMERS[step]||25000;
+  io.to(room.code).emit("nightStepTimer",{step,duration});
+
+  if(step==="cupid"){
+    const cupid=aliveRole(g,"Cupidon");
+    if(!cupid){g.cupidUsed=true;return startNightStep(room,"wolves");}
+    if(cupid.isBot){
+      setTimeout(()=>{
+        if(room.game?.phase!=="night"||room.game.nightStep!=="cupid")return;
+        const targets=getAlivePlayers(g).filter(p=>p.pseudo!==cupid.pseudo);
+        if(targets.length>=2){
+          const a=targets[Math.floor(Math.random()*targets.length)];
+          const rest=targets.filter(p=>p.pseudo!==a.pseudo);
+          const b=rest[Math.floor(Math.random()*rest.length)];
+          g.linkedPlayers=[a.pseudo,b.pseudo];
+        }
+        g.cupidUsed=true;
+        io.to(room.code).emit("cupidUsed",{message:"Cupidon a désigné deux joueurs."});
+        startNightStep(room,"wolves");
+      },1500);
+    }
+    setTimeout(()=>{if(room.game?.phase==="night"&&room.game.nightStep==="cupid"){g.cupidUsed=true;startNightStep(room,"wolves");}},duration);
+    return;
+  }
+
+  if(step==="wolves"){
+    const wolves=g.players.filter(p=>p.alive&&p.role==="Loup-Garou");
+    wolves.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{
+      if(room.game?.phase!=="night"||room.game.nightStep!=="wolves")return;
+      const target=randomAliveTarget(g,p=>p.role!=="Loup-Garou");
+      if(target)g.nightVotes[bot.pseudo]=target.pseudo;
+      emitPublicGameState(room,"voteUpdate");
+      if(wolves.every(w=>g.nightVotes[w.pseudo])) finishNightWolves(room);
+    },1200+i*800));
+    setTimeout(()=>{
+      if(room.game?.phase!=="night"||room.game.nightStep!=="wolves")return;
+      wolves.forEach(w=>{if(!g.nightVotes[w.pseudo]){const t=randomAliveTarget(g,p=>p.role!=="Loup-Garou");if(t)g.nightVotes[w.pseudo]=t.pseudo;}});
+      finishNightWolves(room);
+    },duration);
+    return;
+  }
+
+  if(step==="seer"){
+    const seer=aliveRole(g,"Voyante");
+    if(!seer)return startNightStep(room,"witch");
+    if(seer.isBot){
+      setTimeout(()=>{
+        if(room.game?.phase!=="night"||room.game.nightStep!=="seer")return;
+        const target=randomAliveTarget(g,p=>p.pseudo!==seer.pseudo);
+        if(target)io.to(onlineUsers.get(normalizePseudo(seer.pseudo))||"").emit("seerResult",{target:target.pseudo,role:target.role});
+        g.seerUsedThisNight=true;
+        startNightStep(room,"witch");
+      },1200);
+    }
+    setTimeout(()=>{if(room.game?.phase==="night"&&room.game.nightStep==="seer")startNightStep(room,"witch");},duration);
+    return;
+  }
+
+  if(step==="witch"){
+    const witch=aliveRole(g,"Sorcière");
+    if(!witch)return resolveNight(room);
+    const sid=onlineUsers.get(normalizePseudo(witch.pseudo));
+    if(sid)io.to(sid).emit("witchTurn",{
+      victim:g.nightTargetPseudo,
+      canSave:!g.witchSaveUsed,
+      canKill:!g.witchKillUsed
+    });
+    if(witch.isBot){
+      setTimeout(()=>{if(room.game?.phase!=="night"||room.game.nightStep!=="witch")return;resolveNight(room);},12000);
+    }
+    setTimeout(()=>{if(room.game?.phase==="night"&&room.game.nightStep==="witch")resolveNight(room);},duration);
+  }
 }
-function startDayPhase(room,victimPseudo){const g=room.game;if(!g||g.phase==="finished")return;g.dayVotes={};emitPublicGameState(room,"dayStarted");io.to(room.code).emit("dayStarted",{victim:victimPseudo,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot}))});
-  const alive=g.players.filter(p=>p.alive);alive.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{if(room.game?.phase!=="day")return;const t=randomAliveTarget(g,p=>p.pseudo!==bot.pseudo);if(t)g.dayVotes[bot.pseudo]=t.pseudo;tryResolveDay(room);},700+i*250));
-  setTimeout(()=>{if(room.game?.phase!=="day")return;g.players.filter(p=>p.alive).forEach(p=>{if(!g.dayVotes[p.pseudo]){const t=randomAliveTarget(g,x=>x.pseudo!==p.pseudo);if(t)g.dayVotes[p.pseudo]=t.pseudo;}});tryResolveDay(room);},15000);
+
+function finishNightWolves(room){
+  const g=room.game;if(!g||g.phase!=="night"||g.nightStep!=="wolves")return;
+  const counts={};Object.values(g.nightVotes||{}).forEach(t=>counts[t]=(counts[t]||0)+1);
+  g.nightTargetPseudo=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0]||null;
+  startNightStep(room,"seer");
 }
-function tryResolveDay(room){const g=room.game;if(!g||g.phase!=="day")return;const alive=g.players.filter(p=>p.alive);if(alive.some(p=>!g.dayVotes[p.pseudo]))return;const counts={};Object.values(g.dayVotes).forEach(t=>counts[t]=(counts[t]||0)+1);const targetPseudo=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];const eliminated=g.players.find(p=>p.pseudo===targetPseudo);if(eliminated)eliminated.alive=false;g.dayVotes={};if(eliminated&&eliminated.role==="Chasseur")return hunterDeathFlow(room,eliminated,()=>{if(!checkGameWinner(g)){g.day++;g.phase="night";startNightPhase(room);}});if(checkGameWinner(g)){finishGame(room);return;}g.day++;startNightPhase(room);}
-function hunterDeathFlow(room,hunter,done){io.to(room.code).emit("hunterActionRequired",{hunter:hunter.pseudo,targets:room.game.players.filter(p=>p.alive&&p.pseudo!==hunter.pseudo).map(p=>p.pseudo)});setTimeout(()=>{if(room.game?.phase==="finished")return;const alive=room.game.players.filter(p=>p.alive&&p.pseudo!==hunter.pseudo);if(!alive.length)return done();const target=alive[Math.floor(Math.random()*alive.length)];target.alive=false;io.to(room.code).emit("hunterShot",{hunter:hunter.pseudo,target:target.pseudo});done();},10000);}
-function handleRoleAction(room,data){const g=room.game;if(!g||g.phase!=="night")return;const p=g.players.find(x=>normalizePseudo(x.pseudo)===normalizePseudo(data.pseudo));if(!p||!p.alive)return;const target=g.players.find(x=>x.pseudo===data.targetPseudo);
-  if(p.role==="Voyante"&&data.action==="inspect"&&target){const sid=onlineUsers.get(normalizePseudo(p.pseudo));if(sid)io.to(sid).emit("seerResult",{target:target.pseudo,role:target.role});return;}
-  if(p.role==="Sorcière"&&data.action==="save"&&target&&target.alive){g.nightActions=g.nightActions||{};if(!g.nightActions.witchUsed){g.nightActions.saved=target.pseudo;g.nightActions.witchUsed=true;io.to(room.code).emit("roleActionResult",{message:"La Sorcière a utilisé sa potion de vie."});}}
-  if(p.role==="Sorcière"&&data.action==="kill"&&target){g.nightActions=g.nightActions||{};if(!g.nightActions.witchUsed){g.nightActions.witchKill=target.pseudo;g.nightActions.witchUsed=true;io.to(room.code).emit("roleActionResult",{message:"La Sorcière a utilisé sa potion de mort."});}}
+
+function resolveNight(room){
+  const g=room.game;if(!g||g.phase!=="night")return;
+  const victim=g.players.find(p=>p.pseudo===g.nightTargetPseudo&&p.alive);
+  if(victim&&g.nightActions?.saved!==victim.pseudo)victim.alive=false;
+  const witchKill=g.nightActions?.witchKill;
+  if(witchKill){const v=g.players.find(p=>p.pseudo===witchKill&&p.alive);if(v)v.alive=false;}
+  const linked=applyLinkedDeaths(g);
+  const deaths=g.players.filter(p=>!p.alive).map(p=>p.pseudo);
+  g.nightVotes={};
+  g.nightStep=null;
+  io.to(room.code).emit("nightResolved",{victim:victim?.pseudo||null,linkedDeaths:linked,deaths});
+  if(checkGameWinner(g)){finishGame(room);return;}
+  startDayPhase(room,deaths);
+}
+
+function startDayPhase(room,deathPseudos=[]){
+  const g=room.game;if(!g||g.phase==="finished")return;
+  g.phase="day";g.nightStep=null;g.dayVotes={};
+  emitPublicGameState(room,"dayStarted");
+  io.to(room.code).emit("dayStarted",{victims:deathPseudos,players:g.players.map(p=>({pseudo:p.pseudo,alive:p.alive,isBot:p.isBot}))});
+  const alive=g.players.filter(p=>p.alive);
+  alive.filter(p=>p.isBot).forEach((bot,i)=>setTimeout(()=>{
+    if(room.game?.phase!=="day")return;
+    const t=randomAliveTarget(g,p=>p.pseudo!==bot.pseudo);
+    if(t)g.dayVotes[bot.pseudo]=t.pseudo;
+    emitPublicGameState(room,"voteUpdate");
+    if(alive.every(p=>g.dayVotes[p.pseudo]))tryResolveDay(room);
+  },2500+i*1200));
+  setTimeout(()=>{
+    if(room.game?.phase!=="day")return;
+    g.players.filter(p=>p.alive).forEach(p=>{if(!g.dayVotes[p.pseudo]){const t=randomAliveTarget(g,x=>x.pseudo!==p.pseudo);if(t)g.dayVotes[p.pseudo]=t.pseudo;}});
+    tryResolveDay(room);
+  },GAME_TIMERS.day);
+}
+
+function tryResolveDay(room){
+  const g=room.game;if(!g||g.phase!=="day")return;
+  const alive=g.players.filter(p=>p.alive);if(alive.some(p=>!g.dayVotes[p.pseudo]))return;
+  const counts={};Object.values(g.dayVotes).forEach(t=>counts[t]=(counts[t]||0)+1);
+  const targetPseudo=Object.keys(counts).sort((a,b)=>counts[b]-counts[a])[0];
+  const eliminated=g.players.find(p=>p.pseudo===targetPseudo);
+  if(eliminated)eliminated.alive=false;
+  const linked=applyLinkedDeaths(g);
+  io.to(room.code).emit("dayVoteResult",{target:targetPseudo,counts,linkedDeaths:linked});
+  g.dayVotes={};
+  if(checkGameWinner(g)){finishGame(room);return;}
+  g.day++;startNightPhase(room);
+}
+
+function handleRoleAction(room,data){
+  const g=room.game;if(!g||g.phase!=="night")return;
+  const p=g.players.find(x=>normalizePseudo(x.pseudo)===normalizePseudo(data.pseudo));if(!p||!p.alive)return;
+  const target=g.players.find(x=>x.pseudo===data.targetPseudo);
+  if(p.role==="Cupidon"&&g.nightStep==="cupid"&&data.action==="cupid"){
+    if(g.cupidUsed)return;
+    if(!target||target.pseudo===p.pseudo)return;
+    const second=g.players.find(x=>x.pseudo===data.secondTargetPseudo&&x.alive&&x.pseudo!==p.pseudo&&x.pseudo!==target.pseudo);
+    if(!second)return;
+    g.linkedPlayers=[target.pseudo,second.pseudo];g.cupidUsed=true;
+    io.to(room.code).emit("cupidUsed",{message:"Cupidon a désigné deux joueurs."});
+    return startNightStep(room,"wolves");
+  }
+  if(p.role==="Loup-Garou"&&g.nightStep==="wolves"&&data.action==="vote"){
+    if(!target||!target.alive||target.role==="Loup-Garou")return;
+    if(g.nightVotes[p.pseudo])return;
+    g.nightVotes[p.pseudo]=target.pseudo;
+    io.to(room.code).emit("voteUpdate",{voter:p.pseudo,target:target.pseudo,count:Object.keys(g.nightVotes).length,required:g.players.filter(x=>x.alive&&x.role==="Loup-Garou").length});
+    const wolves=g.players.filter(x=>x.alive&&x.role==="Loup-Garou");if(wolves.every(w=>g.nightVotes[w.pseudo]))finishNightWolves(room);
+    return;
+  }
+  if(p.role==="Voyante"&&g.nightStep==="seer"&&data.action==="inspect"&&target){
+    const sid=onlineUsers.get(normalizePseudo(p.pseudo));if(sid)io.to(sid).emit("seerResult",{target:target.pseudo,role:target.role});
+    g.seerUsedThisNight=true;return startNightStep(room,"witch");
+  }
+  if(p.role==="Sorcière"&&g.nightStep==="witch"){
+    if(data.action==="save"&&target&&target.pseudo===g.nightTargetPseudo&&!g.witchSaveUsed){g.nightActions.saved=target.pseudo;g.witchSaveUsed=true;io.to(room.code).emit("roleActionResult",{message:"La Sorcière a utilisé sa potion de vie."});return resolveNight(room);}
+    if(data.action==="kill"&&target&&target.alive&&!g.witchKillUsed){g.nightActions.witchKill=target.pseudo;g.witchKillUsed=true;io.to(room.code).emit("roleActionResult",{message:"La Sorcière a utilisé sa potion de mort."});return resolveNight(room);}
+    if(data.action==="pass")return resolveNight(room);
+  }
 }
 
 /* =========================================
@@ -2804,6 +2984,8 @@ io.on(
           "onlineUsers",
           getOnlineUserInfo()
         );
+
+        socket.emit("globalBoostUpdated", { all: true, boosts: getGlobalBoostPayload() });
 
         io.emit(
           "userStatusChanged",
@@ -3214,14 +3396,13 @@ io.on(
     /* =====================================
        ACTIONS DE PARTIE
     ===================================== */
-    socket.on("nightVote",(data)=>{const room=findRoom(data?.code);if(!room?.game||room.game.phase!=="night")return;const g=room.game,v=g.players.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(data?.pseudo)),t=g.players.find(p=>p.pseudo===data?.targetPseudo);if(!v||!t||!v.alive||!t.alive||v.role!=="Loup-Garou")return;
-if(g.nightVotes[v.pseudo]){socket.emit("voteError",{message:"Tu as déjà voté cette nuit."});return;}
-g.nightVotes[v.pseudo]=t.pseudo;io.to(room.code).emit("voteUpdate",{voter:v.pseudo,target:t.pseudo,count:Object.keys(g.nightVotes).length,required:g.players.filter(p=>p.alive&&p.role==="Loup-Garou").length});tryResolveNight(room);saveDatabase();});
+    socket.on("nightVote",(data)=>{handleRoleAction(findRoom(data?.code),{...data,action:"vote"});saveDatabase();});
     socket.on("gameChat",(data)=>{
       const room=findRoom(data?.code);
       const pseudo=String(data?.pseudo||"");
       const player=room?.game?.players?.find(p=>normalizePseudo(p.pseudo)===normalizePseudo(pseudo));
       if(!room||!player||!player.alive||room.game.phase==="finished") return;
+      if(room.game.phase!=="day") return;
       const text=String(data?.text||"").trim();
       if(!text)return;
       const filtered=filterChatText(text);
