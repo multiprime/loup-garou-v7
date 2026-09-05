@@ -1854,7 +1854,9 @@ app.post(
         classId || ""
     };
 
-    addNotification(user.pseudo,{title:"🎁 Récompense du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Appuie sur Récupérer.`,type:"creator",reward});
+    ensureUserState(user);
+    applyReward(user,reward);
+    addNotification(user.pseudo,{title:"🎁 Cadeau du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Le cadeau a été ajouté à votre compte !`,type:"creatorGift"});
     saveDatabase();
 
     const socketId =
@@ -1962,7 +1964,9 @@ app.post(
           return;
         }
 
-        addNotification(user.pseudo,{title:"🎁 Récompense du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Appuie sur Récupérer.`,type:"creator",reward});
+        ensureUserState(user);
+        applyReward(user,reward);
+        addNotification(user.pseudo,{title:"🎁 Cadeau du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Le cadeau a été ajouté à votre compte !`,type:"creatorGift"});
 
         const socketId =
           onlineUsers.get(
@@ -1999,9 +2003,29 @@ app.get("/api/admin/bootstrap",(req,res)=>{
 
 app.post("/api/admin/reward-all-now",(req,res)=>{
   if(normalizePseudo(req.body.adminPseudo)!==ADMIN_PSEUDO)return res.status(403).json({message:"Accès refusé."});
-  const reward={coins:Math.max(0,Number(req.body.coins||0)),xp:Math.max(0,Number(req.body.xp||0)),trophies:Number(req.body.trophies||0),classId:req.body.classId||""};
+  const reward={coins:Math.max(0,Number(req.body.coins||0)),xp:Math.max(0,Number(req.body.xp||0)),trophies:Math.max(0,Number(req.body.trophies||0)),classId:req.body.classId||""};
   if(reward.classId&&!CLASSES.some(c=>c.id===reward.classId))return res.status(400).json({message:"Classe invalide."});
-  let count=0; db.users.forEach(u=>{if(req.body.onlineOnly&&!isUserOnline(u.pseudo))return;addNotification(u.pseudo,{title:"🎁 Récompense du créateur",message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Appuie sur Récupérer.`,type:"creator",reward});count++;}); saveDatabase(); res.json({message:`Récompense envoyée à ${count} joueur(s).`});
+
+  let count=0;
+  db.users.forEach(u=>{
+    // Par défaut, TOUS les comptes reçoivent réellement le cadeau,
+    // même s'ils sont hors ligne. Le checkbox onlineOnly reste disponible
+    // uniquement si l'admin veut volontairement limiter l'envoi.
+    if(req.body.onlineOnly&&!isUserOnline(u.pseudo))return;
+    ensureUserState(u);
+    applyReward(u,reward);
+    addNotification(u.pseudo,{
+      title:"🎁 Cadeau du créateur",
+      message:`Le créateur du jeu vous a offert ${rewardDescription(reward)}. Le cadeau a été ajouté à votre compte !`,
+      type:"creatorGift"
+    });
+    const socketId=onlineUsers.get(normalizePseudo(u.pseudo));
+    if(socketId)io.to(socketId).emit("profileUpdated",publicUser(u));
+    count++;
+  });
+
+  saveDatabase();
+  res.json({message:`Cadeau reçu par ${count} joueur(s).`,count});
 });
 
 
