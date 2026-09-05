@@ -1194,3 +1194,35 @@ body.blood-moon-active[data-lg-phase="loading"]{background:radial-gradient(circl
 .admin-boost-buttons button{min-width:48px}
 .admin-boost-card small{opacity:.75}
 @media(max-width:900px){.admin-boost-grid{grid-template-columns:1fr}}
+
+
+/* V19 — interface partie claire */
+.global-boost-banner{margin:10px auto 18px;max-width:1100px;padding:12px 16px;border:1px solid rgba(255,255,255,.18);border-radius:16px;background:rgba(120,20,20,.22);text-align:center;font-weight:700}
+.global-boost-banner strong{display:block;margin-bottom:4px}
+.v19-game{max-width:1200px;margin:0 auto;padding:20px}
+.game-v19-timer{min-width:190px;padding:12px 16px;border:1px solid rgba(255,255,255,.16);border-radius:14px;text-align:center;font-weight:800}
+.game-subtitle{opacity:.7;margin:4px 0 0}
+.cupid-choice,.witch-victim-box{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px;margin:12px 0;border:1px solid rgba(255,255,255,.12);border-radius:14px;background:rgba(255,255,255,.03)}
+.cupid-choice span{font-weight:800}
+@media(max-width:700px){.game-header{display:flex;flex-direction:column;gap:12px}.game-v19-timer{width:100%;box-sizing:border-box}.v19-game{padding:12px}}
+
+
+/* V20 — pendant une vraie partie, le menu principal disparaît totalement. */
+body.in-game #menuScreen > .top-bar,
+body.in-game #menuScreen > .announcement-box,
+body.in-game #menuScreen > .menu-grid,
+body.in-game #menuScreen > .global-boost-banner,
+body.in-game #menuScreen > .active-boosts { display:none !important; }
+body.in-game #menuScreen { padding:0; min-height:100vh; }
+body.in-game #gameLobby { display:block !important; padding:0; }
+body.in-game #gameLobby > h2,
+body.in-game #gameLobby > .lobby-actions,
+body.in-game #gameLobby > .join-room,
+body.in-game #gameLobby > #startGameButton,
+body.in-game #gameLobby > #startGameWithBotsButton,
+body.in-game #gameLobby > .ranked-toggle,
+body.in-game #gameLobby > #roomFriends { display:none !important; }
+body.in-game .v19-game { max-width:1180px; min-height:calc(100vh - 20px); margin:0 auto; border-radius:0; border-left:0; border-right:0; }
+.game-night-order{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:14px 0 20px}.game-night-order span{padding:8px 12px;border:1px solid #3b3b3b;border-radius:999px;background:#111;color:#777;font-size:12px}.game-night-order .active{color:#f0d39e;border-color:#6a4b2d;box-shadow:0 0 18px rgba(180,120,50,.15)}
+.game-instruction{font-size:17px;line-height:1.55;min-height:74px;display:flex;align-items:center;justify-content:center;text-align:center}
+.game-v19-timer{min-width:180px;padding:14px 18px;font-size:18px;font-weight:700}
