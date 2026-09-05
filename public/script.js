@@ -2223,13 +2223,62 @@ socket.on("roomInviteResult",()=>loadNotificationsV8());
 async function loadAdminV8(){
  if(!isAdmin())return;try{const d=await apiJson(`/api/admin/bootstrap?adminPseudo=${encodeURIComponent(currentUser.pseudo)}`);const uc=$("adminUsersList"),cc=$("adminClassesList"),sel=$("adminClassSelect"),selAll=$("adminAllClassSelect");
   if(sel)sel.innerHTML=`<option value="">Choisir une classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");if(selAll)selAll.innerHTML=`<option value="">Aucune classe</option>`+d.classes.map(x=>`<option value="${esc(x.id)}">${esc(x.name)} — ${x.price} 🪙 / ${x.chance}%</option>`).join("");
-  if(cc)cc.innerHTML=`<h4>🐺 Classes</h4>`+d.classes.map(x=>`<div class="admin-class-row"><b>${esc(x.name)}</b><span>${x.price} 🪙 • ${x.chance}%</span></div>`).join("");if(uc)uc.innerHTML=`<h4>👥 ${d.users.length} joueur(s)</h4>`+d.users.map(u=>`<div class="admin-user-row"><span>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</span><small>🪙${u.coins||0} • ✨${u.xp||0} • 🏆${u.trophies||0} • ${esc(u.rankedRank||"Bois")}</small><button class="secondary-button admin-select-user" data-pseudo="${esc(u.pseudo)}">Sélectionner</button></div>`).join("");uc?.querySelectorAll(".admin-select-user").forEach(b=>b.onclick=()=>{$("adminPlayerSearch").value=b.dataset.pseudo;$ ("adminSearchButton")?.click();});
+  if(cc)cc.innerHTML=`<h4>🐺 Classes</h4>`+d.classes.map(x=>`<div class="admin-class-row"><b>${esc(x.name)}</b><span>${x.price} 🪙 • ${x.chance}%</span></div>`).join("");
+  renderAdminBoostsV16(d.globalBoosts);
+  if(uc)uc.innerHTML=`<h4>👥 ${d.users.length} joueur(s)</h4>`+d.users.map(u=>`<div class="admin-user-row"><span>${esc(u.icon||"🐺")} ${esc(u.pseudo)}</span><small>🪙${u.coins||0} • ✨${u.xp||0} • 🏆${u.trophies||0} • ${esc(u.rankedRank||"Bois")}</small><button class="secondary-button admin-select-user" data-pseudo="${esc(u.pseudo)}">Sélectionner</button></div>`).join("");uc?.querySelectorAll(".admin-select-user").forEach(b=>b.onclick=()=>{$("adminPlayerSearch").value=b.dataset.pseudo;$ ("adminSearchButton")?.click();});
  }catch(e){$("adminMessage").textContent="❌ "+e.message;}
 }
 $("adminButton")?.addEventListener("click",()=>setTimeout(loadAdminV8,50));
 $("adminRewardType")?.addEventListener("change",()=>{});
+
+function renderAdminBoostsV16(boosts){
+  const map={coins:"Coins",xp:"Xp",trophies:"Trophies"};
+  const now=Date.now();
+  Object.entries(map).forEach(([type,label])=>{
+    const b=boosts?.[type]||{multiplier:1,until:0};
+    const el=$("adminBoost"+label+"Status");
+    if(!el)return;
+    const left=Math.max(0,Number(b.until||0)-now);
+    el.textContent=left>0?`⚡ x${b.multiplier} actif • encore ${Math.ceil(left/60000)} min`:"Aucun bonus actif";
+  });
+}
+
+async function activateAdminBoostV16(type,multiplier){
+  if(!currentUser||!isAdmin())return;
+  const msg=$("adminBoostMessage");
+  try{
+    const d=await apiJson("/api/admin/global-boost",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        adminPseudo:currentUser.pseudo,
+        type,
+        multiplier,
+        durationMinutes:10
+      })
+    });
+    renderAdminBoostsV16(d.globalBoosts);
+    if(msg)msg.textContent="✅ "+d.message;
+  }catch(e){
+    if(msg)msg.textContent="❌ "+e.message;
+  }
+}
+
+document.querySelectorAll(".admin-boost-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    const wrap=btn.closest("[data-boost-type]");
+    if(!wrap)return;
+    activateAdminBoostV16(wrap.dataset.boostType,Number(btn.dataset.mult));
+  });
+});
+
 $("adminBloodMoonButton")?.addEventListener("click",async()=>{if(!isAdmin())return;try{const d=await apiJson("/api/admin/blood-moon/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminPseudo:currentUser.pseudo})});$("adminBloodMoonMessage").textContent="✅ "+d.message;refreshBloodMoonButton();}catch(e){$("adminBloodMoonMessage").textContent="❌ "+e.message;}});
 socket.on("bloodMoonStatusChanged",()=>{refreshBloodMoonButton();});
+socket.on("globalBoostUpdated",data=>{
+  if(isAdmin())loadAdminV8();
+  if(data?.boost)updateProfile();
+});
+socket.on("voteError",data=>{alert("🗳️ "+(data?.message||"Vote refusé."));});
 
 $("adminRewardAllButton")?.addEventListener("click",async()=>{if(!isAdmin())return;try{const d=await apiJson("/api/admin/reward-all-now",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({adminPseudo:currentUser.pseudo,coins:Number($("adminAllCoins")?.value||0),xp:Number($("adminAllXp")?.value||0),trophies:Number($("adminAllTrophies")?.value||0),classId:$("adminAllClassSelect")?.value||"",onlineOnly:Boolean($("adminOnlineOnly")?.checked)})});$("adminAllMessage").textContent="✅ "+d.message;loadAdminV8();}catch(e){$("adminAllMessage").textContent="❌ "+e.message;}});
 
@@ -2294,7 +2343,7 @@ function renderGamePhaseV8(phase,data){
         ${phase==="night" && myGameRole==="Loup-Garou"?"Choisis une cible puis confirme ton vote. Les autres rôles agissent secrètement. Aucun allié ne sera affiché.":
           phase==="night"&&myGameRole==="Voyante"?"Choisis un joueur puis utilise ton pouvoir pour découvrir son rôle.":
           phase==="night"&&myGameRole==="Sorcière"?"Choisis une cible puis utilise une potion disponible.":
-          phase==="night"?"La nuit, reste attentif : ton rôle peut avoir une action spéciale.":
+          phase==="night"?"🌙 Tu n’as pas de pouvoir cette nuit. Seuls les Loups-Garous votent, la Voyante utilise son pouvoir et la Sorcière utilise ses potions.":
           "🗳️ Choisis le joueur que tu veux éliminer, puis confirme ton vote."}
       </div>
 
