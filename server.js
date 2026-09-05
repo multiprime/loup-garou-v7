@@ -873,7 +873,7 @@ function getEquippedClass(player) {
   return (
     CLASSES.find(
       (classe) => classe.id === user.equippedClass
-    ) || CLASSES[0]
+    ) || null
   );
 }
 
@@ -885,57 +885,66 @@ function classCanGrantRole(classId, role) {
     witch1: ["Sorcière"],
     cupid1: ["Cupidon"]
   };
-
   return Boolean(exact[classId]?.includes(role));
 }
 
-function roleLotteryWeight(player, role) {
-  // Les rôles spéciaux sont réellement liés aux classes possédées.
-  // Une classe compatible augmente fortement la probabilité, sans jamais
-  // révéler à la table qui possède quelle classe.
-  const classe = getEquippedClass(player);
-  if (!classe) return player.isBot ? 8 : 1;
-  const chance = Math.max(1, Math.min(100, Number(classe.chance || 1)));
-  if (classCanGrantRole(classe.id, role)) return chance;
-  return 1;
+function getClassRole(classId) {
+  const map = {
+    wolf1: "Loup-Garou",
+    wolf2: "Loup-Garou",
+    seer1: "Voyante",
+    witch1: "Sorcière",
+    cupid1: "Cupidon"
+  };
+  return map[classId] || null;
 }
 
-function weightedPick(players, role, used) {
-  const candidates = players.filter(p => !used.has(p.pseudo));
-  if (!candidates.length) return null;
-  const weights = candidates.map(p => roleLotteryWeight(p, role));
-  const total = weights.reduce((a,b)=>a+b,0);
-  let roll = Math.random() * total;
-  for (let i=0;i<candidates.length;i++) {
-    roll -= weights[i];
-    if (roll <= 0) return candidates[i];
-  }
-  return candidates[candidates.length-1];
-}
-
-function createGame(room) {
-  const players = shuffle(room.players);
-  // Configuration classique pour 8 joueurs : 2 Loups, 1 Voyante,
-  // 1 Sorcière, 1 Cupidon et 3 Villageois. Le paquet est mélangé avant
-  // l'attribution : aucun ordre de joueur ne favorise un rôle.
-  const roles = shuffle([
-    "Loup-Garou", "Loup-Garou", "Voyante", "Sorcière", "Cupidon",
+function assignRolesForGame(players) {
+  // Pioche classique à 8 : 2 Loups, 1 Voyante, 1 Sorcière,
+  // 1 Cupidon et 3 Villageois. Le paquet est mélangé à chaque partie.
+  // Sans classe équipée, chaque joueur a la même chance d'obtenir chaque
+  // place du paquet. Une classe équipée garantit le personnage associé.
+  const rolePool = shuffle([
+    "Loup-Garou", "Loup-Garou",
+    "Voyante", "Sorcière", "Cupidon",
     "Villageois", "Villageois", "Villageois"
   ]);
 
   const assignments = new Map();
-  const used = new Set();
-  roles.forEach(role => {
-    if (role === "Villageois") return;
-    const player = weightedPick(players, role, used);
-    if (player) { assignments.set(player.pseudo, role); used.add(player.pseudo); }
+  const roleSlots = {};
+  rolePool.forEach(role => { roleSlots[role] = (roleSlots[role] || 0) + 1; });
+
+  // Classes équipées = priorité. Si deux joueurs ont la même classe et qu'il
+  // n'y a plus de place pour ce rôle, le joueur supplémentaire revient au tirage.
+  shuffle(players.slice()).forEach(player => {
+    const classe = getEquippedClass(player);
+    const wanted = getClassRole(classe?.id);
+    if (!wanted || !roleSlots[wanted]) return;
+    assignments.set(player.pseudo, wanted);
+    roleSlots[wanted]--;
   });
 
+  // Tous les autres reçoivent aléatoirement les places restantes.
+  const freePlayers = shuffle(players.filter(p => !assignments.has(p.pseudo)));
+  const remainingRoles = shuffle(
+    Object.entries(roleSlots).flatMap(([role, count]) => Array(count).fill(role))
+  );
+  freePlayers.forEach((player, i) => {
+    assignments.set(player.pseudo, remainingRoles[i] || "Villageois");
+  });
+
+  return assignments;
+}
+
+function createGame(room) {
+  const players = shuffle(room.players);
+  const assignments = assignRolesForGame(players);
   const gamePlayers = players.map(player => ({
     pseudo: player.pseudo,
     isBot: Boolean(player.isBot),
     alive: true,
     role: assignments.get(player.pseudo) || "Villageois",
+    classId: getEquippedClass(player)?.id || null,
     classChance: getEquippedClass(player)?.chance || 0
   }));
 
@@ -1185,7 +1194,7 @@ app.post(
         ],
 
         equippedClass:
-          "wolf1",
+          null,
 
         gamesPlayed: 0,
 
@@ -2714,11 +2723,11 @@ function randomAliveTarget(game, filterFn) {
   const list=getAlivePlayers(game).filter(filterFn||(()=>true)); return list.length?list[Math.floor(Math.random()*list.length)]:null;
 }
 const GAME_TIMERS = {
-  cupid: 45000,
-  wolves: 60000,
-  seer: 45000,
-  witch: 45000,
-  day: 90000
+  cupid: 60000,
+  wolves: 90000,
+  seer: 60000,
+  witch: 60000,
+  day: 120000
 };
 
 function aliveRole(game, role) {
